@@ -1,0 +1,89 @@
+import mongoose from 'mongoose'
+import address from './address.model.js';
+
+const userSchema = new mongoose.Schema(
+    {
+        email: {
+            type: String,
+            unique: true,
+            required: [true, 'El email es requerido'],
+            lowercase: true,
+            trim: true,
+            match: [/^\S+@\S+\.\S+$/, 'Email no válido']
+            // TODO: Cual es el maximo de un correo??
+        },
+        password: {
+            type: String,
+            required: [true, 'Hace falta una contraseña'],
+            minlength: 8,
+            select: false
+        },
+        name: {
+            type: String,
+            required: [true, 'Nombre es un campo obligatorio'],
+        },
+        lastName: {
+            type: String,
+            required: [true, 'El/los apellido(s) es un campo obligatorio'],
+        },
+        nif: {
+            // TODO: normalizar al llegar la letra a mayuscula
+            // TODO: cuanto tiene un DNI de longitud
+            type: String,
+            required: [true, "El campo NIF/DNI/NIE es obligatorio"]
+        },
+        role: {
+            type: String,
+            enum: {
+                values: ['guest', 'admin'],
+                message: '{VALUE} no es un rol válido'
+            },
+            default: 'admin'
+        },
+        status: {
+            type: String,
+            enum: {
+                values: ['pending', 'verified'],
+                message: '{VALUE} no es un valor válido'
+            },
+            default: 'pending'
+        },
+        // TODO: Como hacer?? Zod borra el campo o lo introduce o lo hace nuestro esquema? 
+        verificationCode: {
+            type: String
+        },
+        // TODO: Como hacer?? Zod borra el campo o lo introduce o lo hace nuestro esquema? 
+        verificationAttempts: {
+            type: Number,  // Intentos restantes (máximo 3)
+            default: 0,
+            max: 3
+        }, 
+        company: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Company'
+        },
+        address 
+        
+        // TODO: Soft delete 
+    }, 
+    {
+        timestamps: true,
+        versionKey: false        
+    }
+        
+);
+
+userSchema.index({ email: 1 });
+// TODO: que es index unique ? que es indez negativo o juntos?
+
+// Virtual: fullName: name + ' ' + lastName
+userSchema.virtual('fullName').get(function() {
+  return userSchema.name + ' ' + userSchema.lastName;
+});
+
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
+
+const User = mongoose.model('User', userSchema);
+
+export default User;

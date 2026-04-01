@@ -1,0 +1,37 @@
+{
+  "name": "practica-intermedia-gestion-de-usuarios-bildyapp",
+  "version": "1.0.0",
+  "description": "Backend de BildyApp, una API REST con Node.js y Express para la gestión de albaranes de obra. Implementa gestión de usuarios, incluyendo registro, autenticación, onboarding y administración de cuentas.",
+  "homepage": "https://github.com/Jorgesu040/Practica-Intermedia-Gestion-de-Usuarios-BildyApp#readme",
+  "bugs": {
+    "url": "https://github.com/Jorgesu040/Practica-Intermedia-Gestion-de-Usuarios-BildyApp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jorgesu040/Practica-Intermedia-Gestion-de-Usuarios-BildyApp.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "src/app.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "node --watch --env-file=.env src/app.js",
+    "start": "node --env-file=.env src/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.23.0",
+    "multer": "^2.1.1",
+    "zod": "^3.25.76"
+  }
+}
