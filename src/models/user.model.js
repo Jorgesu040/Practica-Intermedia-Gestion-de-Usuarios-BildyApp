@@ -30,7 +30,8 @@ const userSchema = new mongoose.Schema(
             // TODO: normalizar al llegar la letra a mayuscula
             // TODO: cuanto tiene un DNI de longitud
             type: String,
-            required: [true, "El campo NIF/DNI/NIE es obligatorio"]
+            required: [true, "El campo NIF/DNI/NIE es obligatorio"],
+            unique: true
         },
         role: {
             type: String,
@@ -78,7 +79,7 @@ userSchema.index({ email: 1 });
 
 // Virtual: fullName: name + ' ' + lastName
 userSchema.virtual('fullName').get(function() {
-  return userSchema.name + ' ' + userSchema.lastName;
+    return `${this.name} ${this.lastName}`.trim();
 });
 
 userSchema.set('toJSON', { virtuals: true });

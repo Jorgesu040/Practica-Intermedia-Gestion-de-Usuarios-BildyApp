@@ -57,46 +57,51 @@ export const onboardingUserSchema = z.object({
 
 export const companyDataSchema = z.object({
     body: z.object({
+        isFreelance: z.boolean(),
         name: z.string()
             .min(2, 'Mínimo 3 caracteres')
             .max(99, 'Máximo 99 caracteres')
-            .trim(),
-        isFreelance: z.boolean(),
+            .trim()
+            .optional(),
         cif: z.string()
             .length(9, 'El NIF/CIF debe tener exactamente 9 caracteres')
-            .toUpperCase(),
-        address: addressSchema
+            .toUpperCase()
+            .optional(),
+        address: addressSchema.optional()
 
     }).superRefine((data, ctx) => {
         if (data.isFreelance) {
-            // Validación NIF (Freelance)
-            if (!/^[0-9]{8}[A-Z]$/.test(data.cif)) {
+            // Un autónomo no debe enviar datos corporativos para evitar inconsistencias con su perfil.
+            if (data.cif || data.name || data.address) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    message: "El NIF debe tener 8 dígitos y una letra",
-                    path: ['cif']
-                });
-            } else if (!checkFormatNIF(data.cif)) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: "La letra del NIF no es correcta",
-                    path: ['cif']
+                    message: "Si es autónomo, no debe enviar CIF, nombre ni dirección (se extraen automáticamente)",
+                    path: ['isFreelance']
                 });
             }
         } else {
-            // Validación CIF (Sociedad)
-            if (!/^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(data.cif)) {
+            // Una empresa sí requiere obligatoriamente estos datos, verificamos presencia
+            if (!data.cif || !data.name || !data.address) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    message: "Formato de CIF inválido",
-                    path: ['cif']
+                    message: "El CIF, nombre y dirección son obligatorios para una empresa",
+                    path: ['isFreelance']
                 });
-            } else if (!checkFormatCIF(data.cif)) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: "El código de control del CIF no es válido",
-                    path: ['cif']
-                });
+            } else {
+                // Validación CIF (Sociedad)
+                if (!/^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(data.cif)) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: "Formato de CIF inválido",
+                        path: ['cif']
+                    });
+                } else if (!checkFormatCIF(data.cif)) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: "El código de control del CIF no es válido",
+                        path: ['cif']
+                    });
+                }
             }
         }
     })
