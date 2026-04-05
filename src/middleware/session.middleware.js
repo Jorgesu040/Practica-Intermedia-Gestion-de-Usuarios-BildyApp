@@ -1,5 +1,5 @@
 import User from "../models/user.model.js";
-import { verifyToken } from "../utils/handleJwt.js";
+import { verifyAccessToken } from "../utils/handleJwt.js";
 
 const authMiddleware = async (req, res, next) => {
 
@@ -12,7 +12,7 @@ const authMiddleware = async (req, res, next) => {
         
         const token = req.headers.authorization.split(' ').pop()
 
-        const dataToken = verifyToken(token)
+        const dataToken = verifyAccessToken(token)
 
         if (!dataToken ||  !dataToken._id) {
             // TODO: throw error 'TOKEN_ID_ERROR' 401

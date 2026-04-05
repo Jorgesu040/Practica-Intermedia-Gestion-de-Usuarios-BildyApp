@@ -34,4 +34,4 @@ refreshTokenSchema.methods.isActive = function() {
 
 const RefreshToken = mongoose.model('RefreshToken', refreshTokenSchema);
 
-export default RefreshToken;    
+export default RefreshToken;

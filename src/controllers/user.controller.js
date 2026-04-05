@@ -1,8 +1,15 @@
 import User from "../models/user.model.js"
-import { tokenSign } from "../utils/handleJwt.js"
+import Company from "../models/company.model.js"
+import RefreshToken from "../models/refreshToken.model.js"
+
+import {
+    generateAccessToken,
+    generatRefreshToken,
+    getRefreshTokenExpiry
+} from "../utils/handleJwt.js"
+
 import { compare, encrypt } from "../utils/handlePassword.js"
 import { handleHttpError } from "../utils/handleError.js"
-import Company from "../models/company.model.js"
 
 
 // POST /api/user/register
@@ -14,20 +21,32 @@ export const registerUser = async (req, res) => {
         const existingUser = await User.findOne({ email: email });
 
         if (existingUser) {
-            handleHttpError(res, 'EMAIL_ALREADY_EXISTS', 409)
+            return handleHttpError(res, 'EMAIL_ALREADY_EXISTS', 409)
         }
 
-        const encryptedPassword = encrypt(password)
+        const encryptedPassword = await encrypt(password)
 
         const verificationCode = Math.floor(Math.random() * 1000000)
 
-        const body = { ...req.body, encryptedPassword, verificationCode }
+        const body = { ...req.body, password: encryptedPassword, verificationCode }
         const dataUser = await User.create(body)
+
+        const accessToken = generateAccessToken(dataUser)
+        const refreshToken = generatRefreshToken(dataUser)
+
+        // Guardamos el Refresh Token en la base de datos
+        await RefreshToken.create({
+            user: dataUser._id,
+            token: refreshToken,
+            expiresAt: getRefreshTokenExpiry(),
+            createdByIp: req.ip
+        })
 
         dataUser.set('password', undefined, { strict: false })
 
         const responseData = {
-            token: tokenSign(dataUser),
+            token: accessToken,
+            refreshToken: refreshToken,
             user: dataUser
         }
 
@@ -41,6 +60,7 @@ export const registerUser = async (req, res) => {
 }
 
 
+// Esta ruta ya devuelve un token de 
 // POST /api/user/validation
 export const validateEmail = async (req, res) => {
 
@@ -76,21 +96,35 @@ export const loginUser = async (req, res) => {
     const { email, password } = req.body
 
     try {
-        const user = await User.find({ email: email })
+        const user = await User.findOne({ email: email })
 
         if (!user) {
-            // TODO: thow error 'EMAIL_NOT_FOUND' 401
+            return handleHttpError(res, 'USER_NOT_FOUND', 404)
         }
 
         const check = compare(password, user.password)
 
-        const responseData = {
-            token: tokenSign(user),
-            user: user
+        if (!check) {
+            return handleHttpError(res, 'INVALID_PASSWORD', 401)
         }
 
+        const accessToken = generateAccessToken(user)
+        const refreshToken = generatRefreshToken(user)
+
+        await RefreshToken.create({
+            user: user._id,
+            token: refreshToken,
+            expiresAt: getRefreshTokenExpiry(),
+            createdByIp: req.ip
+        })
 
         user.set('password', undefined, { strict: false })
+
+        const responseData = {
+            token: accessToken,
+            refreshToken: refreshToken,
+            user: user
+        }
 
         res.status(201).send(responseData)
     } catch (err) {
@@ -242,7 +276,7 @@ export const uploadCompanyLogo = async (req, res) => {
 
         const updatedCompany = await Company.findByIdAndUpdate(
             retrievedUser.company,
-            { logo: logoPath},
+            { logo: logoPath },
             { returnDocument: 'after' }
         )
 
@@ -259,7 +293,6 @@ export const uploadCompanyLogo = async (req, res) => {
 
 
 // GET /api/user/
-
 export const getUserData = async (req, res) => {
 
     const user = req.user;
@@ -277,4 +310,115 @@ export const getUserData = async (req, res) => {
 }
 
 
+// POST /api/user/refresh
+export const refreshAccessToken = async (req, res) => {
+
+    const { refreshToken } = req.body
+
+    if (!refreshToken) {
+        return handleHttpError(res, 'REFRESH_TOKEN_REQUIRED', 400)
+    }
+
+    // Verificar que el refresh token existe en la base de datos
+    const storedToken = await RefreshToken.findOne({ token: refreshToken }).populate('user')
+
+    if (!storedToken || !storedToken.isActive()) {
+        return handleHttpError(res, 'INVALID_REFRESH_TOKEN', 401)
+    }
+
+    const user = storedToken.user
+
+    // Generar un nuevo access token
+    const newAccessToken = generateAccessToken(user)
+
+    return res.status(200).json({
+        token: newAccessToken,
+    })
+}
+
+// POST /api/user/logout
+export const logoutUser = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        const userId = req.user._id;
+
+        if (!refreshToken) {
+            return handleHttpError(res, 'REFRESH_TOKEN_REQUIRED', 400);
+        }
+
+        // Buscamos y eliminamos el token asegurándonos de que
+        // pertenezca al usuario que está haciendo la petición
+        const deletedToken = await RefreshToken.findOneAndDelete({
+            token: refreshToken,
+            user: userId
+        });
+
+        if (!deletedToken) {
+            // El token no existe o no le pertenece a este usuario
+            return handleHttpError(res, 'INVALID_REFRESH_TOKEN', 401);
+        }
+
+        res.status(200).json({ message: 'Logout exitoso' });
+
+    } catch (err) {
+        console.log(err);
+        handleHttpError(res, 'ERR_LOGOUT_USER');
+    }
+}
+
+
+// DELETE /api/user
+export const deleteUser = async (req, res) => {
+    const user = req.user;
+
+    try {
+
+
+        await User.findByIdAndDelete(user._id)
+
+        await RefreshToken.deleteMany({ user: user._id })
+
+        res.status(200).json({ message: 'User deleted successfully' })
+    } catch (err) {
+        console.log(err)
+        return handleHttpError(res, 'ERR_DELETING_USER')
+    }
+
+}
+
+
+// PUT /api/user/password
+export const changePassword = async (req, res) => {
+    const user = req.user;
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+        const retrievedUser = await User.findById(user._id)
+
+        if (!retrievedUser) {
+            return handleHttpError(res, 'USER_NOT_FOUND', 404)
+        }
+
+        const check = compare(currentPassword, retrievedUser.password)
+
+        if (!check) {
+            return handleHttpError(res, 'INVALID_CURRENT_PASSWORD', 401)
+        }
+
+        const encryptedNewPassword = await encrypt(newPassword)
+
+        retrievedUser.set({ password: encryptedNewPassword })
+
+        await retrievedUser.save()
+
+        retrievedUser.set('password', undefined, { strict: false })
+
+        res.status(200).json({ message: 'Password changed successfully' })
+
+    } catch (err) {
+        console.log(err)
+        return handleHttpError(res, 'ERR_CHANGING_PASSWORD')
+    }
+
+}
 

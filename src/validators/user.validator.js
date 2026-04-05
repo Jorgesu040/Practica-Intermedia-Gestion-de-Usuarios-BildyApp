@@ -107,7 +107,7 @@ export const companyDataSchema = z.object({
     })
 })
 
-const imageFileSchema = z.object({
+export const imageFileSchema = z.object({
     body: z.object({
         fieldName: z.string(),
         originalName: z.string(),
@@ -119,13 +119,13 @@ const imageFileSchema = z.object({
     })
 })
 
-const newPasswordSchema = z.object({
+export const newPasswordSchema = z.object({
     body: z.object({
-        oldPassord: passwordField,
-        newPassord: passwordField,
-    }).refine((data) => data.oldPassord != data.newPassord, {
+        currentPassword: passwordField,
+        newPassword: passwordField,
+    }).refine((data) => data.currentPassword != data.newPassword, {
         error: "Las contraseñas han de ser distintas",
-        path: ["newPassord"],
+        path: ["newPassword"],
     }),
 })
 

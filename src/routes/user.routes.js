@@ -1,4 +1,29 @@
 import { Router } from 'express';
+import { validate } from '../middleware/validate.js';
+import authMiddleware from '../middleware/session.middleware.js';
+import {
+    registerSchema,
+    emailValidationSchema,
+    loginSchema,
+    onboardingUserSchema,
+    companyDataSchema,
+    imageFileSchema,
+    newPasswordSchema,
+} from '../validators/user.validator.js';
+
+import {
+    registerUser,
+    validateEmail,
+    loginUser,
+    userOnboarding,
+    companyOnboarding,
+    uploadCompanyLogo,
+    getUserData,
+    refreshAccessToken,
+    logoutUser,
+    deleteUser,
+    changePassword,
+} from '../controllers/user.controller.js';
 
 const placeholder = (req, res) => {
     console.log("Aviso, se esta llamando a una funcion no implementada")
@@ -22,7 +47,7 @@ const router = Router();
 * - Devuelve email, status y role
 * - Devuelve access token de 15 mins y un refresh token de 7 días 
 */
-router.post('/register', placeholder)
+router.post('/register', validate(registerSchema), registerUser)
 
 
 /** Recibe JWT y codigo **/
@@ -35,7 +60,7 @@ router.post('/register', placeholder)
 * - Si no: error 4XX (cual?) y se decrementa contador de intentos
 *   - Si se agotan los intentos error 429 Too Many Requests.
 */
-router.post('/validation', placeholder)
+router.post('/validation', validate(emailValidationSchema), authMiddleware, validateEmail)
 
 
 /** Recibe email y contraseña**/
@@ -44,14 +69,14 @@ router.post('/validation', placeholder)
 * Si las credenciales son validas, devuelve access token y refresh token 
 * Si no son correctas -> 401 Unauthorized
 */
-router.post('/login', placeholder)
+router.post('/login', validate(loginSchema), loginUser)
 
 /** Recibe el resto de datos de 'User' **/
 /*
 * - Requiere token JWT 
 * - Valida con ZOD los datos recibidos (nombre, apellidos, NIF)
 */
-router.put('/register', placeholder)
+router.put('/register', validate(onboardingUserSchema), authMiddleware, userOnboarding)
 
 /** Recibe los datos del esquema 'Company' (menos el logo) **/
 /*
@@ -61,7 +86,7 @@ router.put('/register', placeholder)
 Ver requisitos: https://www.notion.so/Pr-ctica-Intermedia-Gesti-n-de-Usuarios-BildyApp-32c5e4346f1f80b39de6f659ac9abd3f?source=copy_link#32c5e4346f1f80da9567c970721e699f
 */
 // TODO: puede cualquiera unirse a una empresa?
-router.patch('/company', placeholder)
+router.patch('/company', validate(companyDataSchema), authMiddleware, companyOnboarding)
 
 
 /** Recibe una imagen que sera un logo **/
@@ -71,7 +96,7 @@ router.patch('/company', placeholder)
 * - Tiene tamaño maximo en disco //TODO: quien verifica multer, zod, el esquema?
 * - Ruta de subida: uploads/, almacena el logo en campo 'logo' de 'Company'
 */
-router.post('/company/logo', placeholder)
+router.post('/company/logo', validate(imageFileSchema), authMiddleware, uploadCompanyLogo)
 
 
 /*
@@ -79,7 +104,7 @@ router.post('/company/logo', placeholder)
 * - Devuelve tambien el Objeto 'Company'
 * - Devuelve el campo fullName
 */
-router.get('/', placeholder)
+router.get('/', authMiddleware, getUserData)
 
 /**Ruta de refresco**/
 /* 
@@ -87,21 +112,21 @@ router.get('/', placeholder)
 * - //TODO: Rotar refresh token??
 * - Si es invalido o expirado, 401 Unauthorized
 */
-router.post('/refresh', placeholder)
+router.post('/refresh', refreshAccessToken)
 
 /** Logout **/
 /* 
 * - Requiere token JWT
 * - Si el token es invalido, 401 Unauthorized
 */
-router.post('/logout', placeholder)
+router.post('/logout', authMiddleware, logoutUser)
 
 /** Eliminar usuario **/
 /* 
 * - Requiere token JWT
 * - Soft delete con ?soft=true
 */
-router.delete('/', placeholder)
+router.delete('/', authMiddleware, deleteUser)
 
 /** Cambiar contraseña **/
 /*
@@ -111,7 +136,7 @@ router.delete('/', placeholder)
 * - Si todo es correcto, actualiza la contraseña cifrada en la base de datos
 * - Si no, devuelve un error 4XX (cual?)
 */
-router.post('/change-password', placeholder)
+router.post('/change-password', validate(newPasswordSchema), authMiddleware, changePassword)
 
 /** Invitar compañeros **/
 /*
