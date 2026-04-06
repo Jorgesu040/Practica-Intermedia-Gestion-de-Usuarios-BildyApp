@@ -9,12 +9,12 @@ export const notFound = (req, res, next) => {
 };
 
 /**
- * Middleware global de errores
+ * Middleware global de errores, recibe
  */
 export const errorHandler = (err, req, res, next) => {
   console.error('Error:', err.message);
   
-  // Error operacional
+  // Error operacional (error controlado con AppError)
   if (err.isOperational) {
     return res.status(err.statusCode).json({
       error: true,
