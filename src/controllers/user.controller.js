@@ -9,11 +9,11 @@ import {
 } from "../utils/handleJwt.js"
 
 import { compare, encrypt } from "../utils/handlePassword.js"
-import { handleHttpError } from "../utils/handleError.js"
+import { AppError } from "../utils/AppError.js"
 
 
 // POST /api/user/register
-export const registerUser = async (req, res) => {
+export const registerUser = async (req, res, next) => {
 
     const { email, password } = req.body
 
@@ -21,7 +21,7 @@ export const registerUser = async (req, res) => {
         const existingUser = await User.findOne({ email: email });
 
         if (existingUser) {
-            return handleHttpError(res, 'EMAIL_ALREADY_EXISTS', 409)
+            return next(AppError.conflict('EMAIL_ALREADY_EXISTS', 'EMAIL_ALREADY_EXISTS'))
         }
 
         const encryptedPassword = await encrypt(password)
@@ -54,7 +54,7 @@ export const registerUser = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        handleHttpError(res, 'ERR_REGISTERING_USER')
+        next(AppError.internal('ERR_REGISTERING_USER', 'ERR_REGISTERING_USER'))
     }
 
 }
@@ -62,7 +62,7 @@ export const registerUser = async (req, res) => {
 
 // Esta ruta ya devuelve un token de 
 // POST /api/user/validation
-export const validateEmail = async (req, res) => {
+export const validateEmail = async (req, res, next) => {
 
     try {
         const { verificationCode } = req.body;
@@ -84,14 +84,14 @@ export const validateEmail = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        handleHttpError(res, 'ERR_VALIDATING_USER')
+        next(AppError.internal('ERR_VALIDATING_USER', 'ERR_VALIDATING_USER'))
     }
 
 }
 
 
 // POST /api/user/login
-export const loginUser = async (req, res) => {
+export const loginUser = async (req, res, next) => {
 
     const { email, password } = req.body
 
@@ -99,13 +99,13 @@ export const loginUser = async (req, res) => {
         const user = await User.findOne({ email: email })
 
         if (!user) {
-            return handleHttpError(res, 'USER_NOT_FOUND', 404)
+            return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
         }
 
         const check = compare(password, user.password)
 
         if (!check) {
-            return handleHttpError(res, 'INVALID_PASSWORD', 401)
+            return next(AppError.unauthorized('INVALID_PASSWORD', 'INVALID_PASSWORD'))
         }
 
         const accessToken = generateAccessToken(user)
@@ -129,7 +129,7 @@ export const loginUser = async (req, res) => {
         res.status(201).send(responseData)
     } catch (err) {
         console.log(err)
-        handleHttpError(res, 'ERR_REGISTERING_USER')
+        next(AppError.internal('ERR_REGISTERING_USER', 'ERR_REGISTERING_USER'))
     }
 
 }
@@ -137,7 +137,7 @@ export const loginUser = async (req, res) => {
 
 // PUT /api/user/register
 
-export const userOnboarding = async (req, res) => {
+export const userOnboarding = async (req, res, next) => {
 
     const { name, lastName, nif } = req.body
     const authenticatedUser = req.user;
@@ -159,14 +159,14 @@ export const userOnboarding = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        handleHttpError(res, 'ERR_ONBOARDING_USER')
+        next(AppError.internal('ERR_ONBOARDING_USER', 'ERR_ONBOARDING_USER'))
     }
 
 }
 
 
 // PUT /api/user/register
-export const companyOnboarding = async (req, res) => {
+export const companyOnboarding = async (req, res, next) => {
     const {
         isFreelance,
         cif,
@@ -180,7 +180,7 @@ export const companyOnboarding = async (req, res) => {
         const retrievedUser = await User.findById(user._id)
 
         if (!retrievedUser) {
-            return handleHttpError(res, 'USER_NOT_FOUND', 404)
+            return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
         }
 
 
@@ -247,13 +247,13 @@ export const companyOnboarding = async (req, res) => {
         return res.status(200).json({ user: retrievedUser })
     } catch (err) {
         console.log(err)
-        return handleHttpError(res, 'ERR_COMPANY_ONBOARDING')
+        return next(AppError.internal('ERR_COMPANY_ONBOARDING', 'ERR_COMPANY_ONBOARDING'))
     }
 }
 
 
 // PATCH /api/user/logo
-export const uploadCompanyLogo = async (req, res) => {
+export const uploadCompanyLogo = async (req, res, next) => {
 
     const user = req.user;
 
@@ -262,12 +262,12 @@ export const uploadCompanyLogo = async (req, res) => {
 
         if (!retrievedUser || !retrievedUser.company) {
             // El usuario debe tener una compañía antes de poder subirle un logo
-            return handleHttpError(res, 'COMPANY_NOT_FOUND', 404);
+            return next(AppError.notFound('COMPANY_NOT_FOUND', 'COMPANY_NOT_FOUND'))
         }
 
         // Multer debería haber añadiddo el campo a la request
         if (!req.file) {
-            return handleHttpError(res, 'NO_FILE_UPLOADED', 400);
+            return next(AppError.badRequest('NO_FILE_UPLOADED', 'NO_FILE_UPLOADED'))
         }
 
         // Multer dejó los metadatos en req.file
@@ -286,14 +286,14 @@ export const uploadCompanyLogo = async (req, res) => {
         })
     } catch (err) {
         console.log(err)
-        return handleHttpError(res, 'ERR_UPLOADING_LOGO')
+        return next(AppError.internal('ERR_UPLOADING_LOGO', 'ERR_UPLOADING_LOGO'))
     }
 }
 
 
 
 // GET /api/user/
-export const getUserData = async (req, res) => {
+export const getUserData = async (req, res, next) => {
 
     const user = req.user;
 
@@ -305,25 +305,25 @@ export const getUserData = async (req, res) => {
         return res.status(200).json({ user: retrievedUser })
     } catch (err) {
         console.log(err)
-        return handleHttpError(res, 'ERR_GETTING_USER_DATA')
+        return next(AppError.internal('ERR_GETTING_USER_DATA', 'ERR_GETTING_USER_DATA'))
     }
 }
 
 
 // POST /api/user/refresh
-export const refreshAccessToken = async (req, res) => {
+export const refreshAccessToken = async (req, res, next) => {
 
     const { refreshToken } = req.body
 
     if (!refreshToken) {
-        return handleHttpError(res, 'REFRESH_TOKEN_REQUIRED', 400)
+        return next(AppError.badRequest('REFRESH_TOKEN_REQUIRED', 'REFRESH_TOKEN_REQUIRED'))
     }
 
     // Verificar que el refresh token existe en la base de datos
     const storedToken = await RefreshToken.findOne({ token: refreshToken }).populate('user')
 
     if (!storedToken || !storedToken.isActive()) {
-        return handleHttpError(res, 'INVALID_REFRESH_TOKEN', 401)
+        return next(AppError.unauthorized('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN'))
     }
 
     const user = storedToken.user
@@ -337,13 +337,13 @@ export const refreshAccessToken = async (req, res) => {
 }
 
 // POST /api/user/logout
-export const logoutUser = async (req, res) => {
+export const logoutUser = async (req, res, next) => {
     try {
         const { refreshToken } = req.body;
         const userId = req.user._id;
 
         if (!refreshToken) {
-            return handleHttpError(res, 'REFRESH_TOKEN_REQUIRED', 400);
+            return next(AppError.badRequest('REFRESH_TOKEN_REQUIRED', 'REFRESH_TOKEN_REQUIRED'))
         }
 
         // Buscamos y eliminamos el token asegurándonos de que
@@ -355,20 +355,20 @@ export const logoutUser = async (req, res) => {
 
         if (!deletedToken) {
             // El token no existe o no le pertenece a este usuario
-            return handleHttpError(res, 'INVALID_REFRESH_TOKEN', 401);
+            return next(AppError.unauthorized('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN'))
         }
 
         res.status(200).json({ message: 'Logout exitoso' });
 
     } catch (err) {
         console.log(err);
-        handleHttpError(res, 'ERR_LOGOUT_USER');
+        next(AppError.internal('ERR_LOGOUT_USER', 'ERR_LOGOUT_USER'))
     }
 }
 
 
 // DELETE /api/user
-export const deleteUser = async (req, res) => {
+export const deleteUser = async (req, res, next) => {
     const user = req.user;
 
     try {
@@ -381,14 +381,14 @@ export const deleteUser = async (req, res) => {
         res.status(200).json({ message: 'User deleted successfully' })
     } catch (err) {
         console.log(err)
-        return handleHttpError(res, 'ERR_DELETING_USER')
+        return next(AppError.internal('ERR_DELETING_USER', 'ERR_DELETING_USER'))
     }
 
 }
 
 
 // PUT /api/user/password
-export const changePassword = async (req, res) => {
+export const changePassword = async (req, res, next) => {
     const user = req.user;
     const { currentPassword, newPassword } = req.body;
 
@@ -396,13 +396,13 @@ export const changePassword = async (req, res) => {
         const retrievedUser = await User.findById(user._id)
 
         if (!retrievedUser) {
-            return handleHttpError(res, 'USER_NOT_FOUND', 404)
+            return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
         }
 
         const check = compare(currentPassword, retrievedUser.password)
 
         if (!check) {
-            return handleHttpError(res, 'INVALID_CURRENT_PASSWORD', 401)
+            return next(AppError.unauthorized('INVALID_CURRENT_PASSWORD', 'INVALID_CURRENT_PASSWORD'))
         }
 
         const encryptedNewPassword = await encrypt(newPassword)
@@ -417,7 +417,7 @@ export const changePassword = async (req, res) => {
 
     } catch (err) {
         console.log(err)
-        return handleHttpError(res, 'ERR_CHANGING_PASSWORD')
+        return next(AppError.internal('ERR_CHANGING_PASSWORD', 'ERR_CHANGING_PASSWORD'))
     }
 
 }
