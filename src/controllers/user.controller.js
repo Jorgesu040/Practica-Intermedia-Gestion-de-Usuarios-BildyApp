@@ -110,7 +110,7 @@ export const registerUser = async (req, res, next) => {
 export const validateEmail = async (req, res, next) => {
 
     try {
-        const { verificationCode } = req.body;
+        const { code } = req.body;
         const authenticatedUser = req.user;
         const retrievedUser = await User.findById(authenticatedUser._id).select('verificationCode verificationAttempts email')
 
@@ -128,7 +128,7 @@ export const validateEmail = async (req, res, next) => {
             return next(AppError.tooManyRequests('Demasiados intentos fallidos. Se ha generado un nuevo código de verificación.', 'TOO_MANY_ATTEMPTS'))
         }
 
-        if (String(retrievedUser.verificationCode) !== String(verificationCode)) {
+        if (String(retrievedUser.verificationCode) !== String(code)) {
             await User.findByIdAndUpdate(authenticatedUser._id, { $inc: { verificationAttempts: -1 } })
             return next(AppError.unauthorized('Código de verificación incorrecto', 'INVALID_VERIFICATION_CODE'))
         }
@@ -159,14 +159,15 @@ export const loginUser = async (req, res, next) => {
     try {
         const user = await User.findOne({ email: email }).select('+password')
 
+        // Para evitar enumerar emails registrados, el mensaje de error es el mismo tanto si no existe el email como si la contraseña es incorrecta
         if (!user) {
-            return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
+            return next(AppError.unauthorized('INVALID_CREDENTIALS', 'INVALID_CREDENTIALS'))
         }
 
         const check = await compare(password, user.password)
 
         if (!check) {
-            return next(AppError.unauthorized('INVALID_PASSWORD', 'INVALID_PASSWORD'))
+            return next(AppError.unauthorized('INVALID_CREDENTIALS', 'INVALID_CREDENTIALS'))
         }
 
         const accessToken = generateAccessToken(user)
