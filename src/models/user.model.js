@@ -84,7 +84,9 @@ const userSchema = new mongoose.Schema(
         
 );
 
-userSchema.index({ email: 1 }, { unique: true });
+//- Evitar declarar el mismo índice dos veces (ejemplo email con unique en campo + schema.index único), 
+// porque Mongoose muestra warning de duplicate schema index.
+// userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ company: 1 });
 userSchema.index({ status: 1 });
 userSchema.index({ role: 1 });

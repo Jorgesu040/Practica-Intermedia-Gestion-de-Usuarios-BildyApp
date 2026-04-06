@@ -29,13 +29,6 @@ import {
 } from '../controllers/user.controller.js';
 import checkRole from '../middleware/role.middleware.js';
 
-const placeholder = (req, res) => {
-    console.log("Aviso, se esta llamando a una funcion no implementada")
-    res.status(501).json({
-        error: "Funcionalidad no implementada"
-    })
-}
-
 const router = Router();
 
 /** Recibe solo email y passwd **/
@@ -60,11 +53,11 @@ router.post('/register', validate(registerSchema), registerUser)
 * - Requiere el JWT en la cabecera 
 * - Recibe nuestro codigo de 6 digitos que creamos en '/register' (y valida (zod) que son 6 digitos)
 * - Si: JWT existe y el codigo coincide con el generado -> status <= 'verified';
-*   - Se devuelve un ACK (un 200?) //TODO: Ack en codigos http
+*   - Se devuelve un ACK (un 200)
 * - Si no: error 4XX (cual?) y se decrementa contador de intentos
 *   - Si se agotan los intentos error 429 Too Many Requests.
 */
-router.post('/validation', validate(emailValidationSchema), authMiddleware, validateEmail)
+router.put('/validation', validate(emailValidationSchema), authMiddleware, validateEmail)
 
 
 /** Recibe email y contraseña**/
@@ -87,9 +80,7 @@ router.put('/register', validate(onboardingUserSchema), authMiddleware, userOnbo
 * - Requiere token JWT
 * - Valida con ZOD name, cif, address (esquema), e isFreelance 
 * - Logica de asignar el CIF: 
-Ver requisitos: https://www.notion.so/Pr-ctica-Intermedia-Gesti-n-de-Usuarios-BildyApp-32c5e4346f1f80b39de6f659ac9abd3f?source=copy_link#32c5e4346f1f80da9567c970721e699f
 */
-// TODO: puede cualquiera unirse a una empresa?
 router.patch('/company', validate(companyDataSchema), authMiddleware, companyOnboarding)
 
 
@@ -100,7 +91,7 @@ router.patch('/company', validate(companyDataSchema), authMiddleware, companyOnb
 * - Tiene tamaño maximo en disco de 5MB
 * - Ruta de subida: uploads/, almacena el logo en campo 'logo' de 'Company'
 */
-router.post('/company/logo', authMiddleware, uploadMiddleware.single('logo'), validateFile(imageFileSchema), uploadCompanyLogo)
+router.patch('/company/logo', authMiddleware, uploadMiddleware.single('logo'), validateFile(imageFileSchema), uploadCompanyLogo)
 
 
 /*
@@ -113,7 +104,7 @@ router.get('/', authMiddleware, getUserData)
 /**Ruta de refresco**/
 /* 
 * - Recibe refresh token y si es valido y no ha expirado devuelve otro access token
-* - //TODO: Rotar refresh token??
+* - He decidido no rotar el refresh token por simplicidad, pero se podria implementar una rotacion de refresh tokens para mayor seguridad.
 * - Si es invalido o expirado, 401 Unauthorized
 */
 router.post('/refresh', refreshAccessToken)
@@ -140,7 +131,7 @@ router.delete('/', authMiddleware, deleteUser)
 * - Si todo es correcto, actualiza la contraseña cifrada en la base de datos
 * - Si no, devuelve un error 4XX (cual?)
 */
-router.post('/change-password', validate(newPasswordSchema), authMiddleware, changePassword)
+router.put('/password', validate(newPasswordSchema), authMiddleware, changePassword)
 
 /** Invitar compañeros **/
 /*
