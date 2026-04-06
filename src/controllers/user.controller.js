@@ -358,7 +358,7 @@ export const refreshAccessToken = async (req, res, next) => {
         return next(AppError.unauthorized('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN'))
     }
 
-    const user = storedToken.user
+    const user = storedToken.userRef;
 
     // Generar un nuevo access token
     const newAccessToken = generateAccessToken(user)

@@ -1,5 +1,6 @@
-import mongoose, { mongo } from 'mongoose'
+import mongoose from 'mongoose'
 import address from './address.model.js';
+import { checkFormatCIF } from '../utils/validatorUtils.js';
 
 const companySchema = new mongoose.Schema(
     {
@@ -17,8 +18,16 @@ const companySchema = new mongoose.Schema(
         cif: {
             type: String,
             required: [true, 'El CIF es requerido'],
-            unique: true
-            // TODO: longitud y formato de CIF?
+            unique: true,
+            trim: true,
+            uppercase: true,
+            minlength: [9, 'El CIF debe tener exactamente 9 caracteres'],
+            maxlength: [9, 'El CIF debe tener exactamente 9 caracteres'],
+            match: [/^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/, 'Formato de CIF inválido'],
+            validate: {
+                validator: checkFormatCIF,
+                message: 'El código de control del CIF no es válido'
+            }
         },
         address,
         logo: {

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import address from './address.model.js';
+import { checkFormatNIF } from '../utils/validatorUtils.js';
 
 const userSchema = new mongoose.Schema(
     {
@@ -27,11 +28,18 @@ const userSchema = new mongoose.Schema(
             required: [true, 'El/los apellido(s) es un campo obligatorio'],
         },
         nif: {
-            // TODO: normalizar al llegar la letra a mayuscula
-            // TODO: cuanto tiene un DNI de longitud
             type: String,
             required: [true, "El campo NIF/DNI/NIE es obligatorio"],
-            unique: true
+            unique: true,
+            trim: true,
+            uppercase: true,
+            minlength: [9, 'El NIF debe tener exactamente 9 caracteres'],
+            maxlength: [9, 'El NIF debe tener exactamente 9 caracteres'],
+            match: [/^[0-9]{8}[A-Z]$/, 'El NIF debe tener 8 dígitos seguidos de una letra'],
+            validate: {
+                validator: checkFormatNIF,
+                message: 'El NIF no es válido'
+            }
         },
         role: {
             type: String,
@@ -50,7 +58,10 @@ const userSchema = new mongoose.Schema(
             default: 'pending'
         },
         verificationCode: {
-            type: String
+            type: String,
+            minlength: [6, 'El código de verificación debe tener 6 caracteres'],
+            maxlength: [6, 'El código de verificación debe tener 6 caracteres'],
+            match: [/^[0-9]{6}$/, 'El código de verificación debe contener 6 dígitos']
         },
         verificationAttempts: {
             type: Number,  // Intentos restantes (máximo 3)
@@ -73,8 +84,10 @@ const userSchema = new mongoose.Schema(
         
 );
 
-userSchema.index({ email: 1 });
-// TODO: que es index unique ? que es indez negativo o juntos?
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ company: 1 });
+userSchema.index({ status: 1 });
+userSchema.index({ role: 1 });
 
 // Virtual: fullName: name + ' ' + lastName
 userSchema.virtual('fullName').get(function() {
