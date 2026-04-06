@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { validate } from '../middleware/validate.js';
-import authMiddleware from '../middleware/session.middleware.js';
+import authMiddleware from '../middleware/auth.middleware.js';
 import {
     registerSchema,
     emailValidationSchema,
