@@ -91,7 +91,7 @@ router.patch('/company', validate(companyDataSchema), authMiddleware, companyOnb
 * - Tiene tamaño maximo en disco de 5MB
 * - Ruta de subida: uploads/, almacena el logo en campo 'logo' de 'Company'
 */
-router.patch('/company/logo', authMiddleware, uploadMiddleware.single('logo'), validateFile(imageFileSchema), uploadCompanyLogo)
+router.patch('/logo', authMiddleware, uploadMiddleware.single('logo'), validateFile(imageFileSchema), uploadCompanyLogo)
 
 
 /*

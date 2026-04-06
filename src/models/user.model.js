@@ -22,16 +22,16 @@ const userSchema = new mongoose.Schema(
         },
         name: {
             type: String,
-            required: [true, 'Nombre es un campo obligatorio'],
+            trim: true
         },
         lastName: {
             type: String,
-            required: [true, 'El/los apellido(s) es un campo obligatorio'],
+            trim: true
         },
         nif: {
             type: String,
-            required: [true, "El campo NIF/DNI/NIE es obligatorio"],
             unique: true,
+            sparse: true,
             trim: true,
             uppercase: true,
             minlength: [9, 'El NIF debe tener exactamente 9 caracteres'],
@@ -92,7 +92,9 @@ userSchema.index({ role: 1 });
 
 // Virtual: fullName: name + ' ' + lastName
 userSchema.virtual('fullName').get(function() {
-    return `${this.name} ${this.lastName}`.trim();
+    const name = this.name ?? '';
+    const lastName = this.lastName ?? '';
+    return `${name} ${lastName}`.trim();
 });
 
 
