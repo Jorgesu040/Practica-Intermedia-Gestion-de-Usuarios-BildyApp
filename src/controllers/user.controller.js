@@ -44,7 +44,7 @@ export const registerUser = async (req, res, next) => {
 
         // Guardamos el Refresh Token en la base de datos
         await RefreshToken.create({
-            user: dataUser._id,
+            userRef: dataUser._id,
             token: refreshToken,
             expiresAt: getRefreshTokenExpiry(),
             createdByIp: req.ip
@@ -125,13 +125,13 @@ export const loginUser = async (req, res, next) => {
     const { email, password } = req.body
 
     try {
-        const user = await User.findOne({ email: email })
+        const user = await User.findOne({ email: email }).select('+password')
 
         if (!user) {
             return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
         }
 
-        const check = compare(password, user.password)
+        const check = await compare(password, user.password)
 
         if (!check) {
             return next(AppError.unauthorized('INVALID_PASSWORD', 'INVALID_PASSWORD'))
@@ -141,7 +141,7 @@ export const loginUser = async (req, res, next) => {
         const refreshToken = generatRefreshToken(user)
 
         await RefreshToken.create({
-            user: user._id,
+            userRef: user._id,
             token: refreshToken,
             expiresAt: getRefreshTokenExpiry(),
             createdByIp: req.ip
@@ -362,7 +362,7 @@ export const refreshAccessToken = async (req, res, next) => {
     }
 
     // Verificar que el refresh token existe en la base de datos
-    const storedToken = await RefreshToken.findOne({ token: refreshToken }).populate('user')
+    const storedToken = await RefreshToken.findOne({ token: refreshToken }).populate('userRef')
 
     if (!storedToken || !storedToken.isActive()) {
         return next(AppError.unauthorized('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN'))
@@ -392,7 +392,7 @@ export const logoutUser = async (req, res, next) => {
         // pertenezca al usuario que está haciendo la petición
         const deletedToken = await RefreshToken.findOneAndDelete({
             token: refreshToken,
-            user: userId
+            userRef: userId
         });
 
         if (!deletedToken) {
@@ -418,7 +418,7 @@ export const deleteUser = async (req, res, next) => {
 
         await User.findByIdAndDelete(user._id)
 
-        await RefreshToken.deleteMany({ user: user._id })
+        await RefreshToken.deleteMany({ userRef: user._id })
 
         notificationEmitter.emit('user:deleted', {
             id: user._id,
@@ -440,13 +440,13 @@ export const changePassword = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
 
     try {
-        const retrievedUser = await User.findById(user._id)
+        const retrievedUser = await User.findById(user._id).select('+password')
 
         if (!retrievedUser) {
             return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
         }
 
-        const check = compare(currentPassword, retrievedUser.password)
+        const check = await compare(currentPassword, retrievedUser.password)
 
         if (!check) {
             return next(AppError.unauthorized('INVALID_CURRENT_PASSWORD', 'INVALID_CURRENT_PASSWORD'))

@@ -13,7 +13,7 @@ export const generateAccessToken = (user) => {
         role: user.role
     }
 
-    const options = {expriresIn: JWT_EXPIRES_IN}
+    const options = { expiresIn: JWT_EXPIRES_IN }
 
     return jwt.sign(payload, JWT_SECRET, options)
 }

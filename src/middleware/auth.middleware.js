@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import { verifyAccessToken } from "../utils/handleJwt.js";
+import { AppError } from "../utils/AppError.js";
 
 const authMiddleware = async (req, res, next) => {
 
@@ -17,7 +18,7 @@ const authMiddleware = async (req, res, next) => {
             return next(AppError.unauthorized('Token de autenticación inválido', 'NOT_SESSION'));
         }
 
-        const user = User.findById(dataToken._id);
+        const user = await User.findById(dataToken._id);
 
         if (!user) {
             return next(AppError.unauthorized('Usuario no encontrado', 'USER_NOT_FOUND'));
