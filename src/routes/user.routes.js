@@ -11,6 +11,8 @@ import {
     imageFileSchema,
     newPasswordSchema,
     inviteSchema,
+    refreshTokenSchema,
+    logoutSchema,
 } from '../validators/user.validator.js';
 
 import {
@@ -107,14 +109,14 @@ router.get('/', authMiddleware, getUserData)
 * - He decidido no rotar el refresh token por simplicidad, pero se podria implementar una rotacion de refresh tokens para mayor seguridad.
 * - Si es invalido o expirado, 401 Unauthorized
 */
-router.post('/refresh', refreshAccessToken)
+router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken)
 
 /** Logout **/
 /* 
 * - Requiere token JWT
 * - Si el token es invalido, 401 Unauthorized
 */
-router.post('/logout', authMiddleware, logoutUser)
+router.post('/logout', validate(logoutSchema), authMiddleware, logoutUser)
 
 /** Eliminar usuario **/
 /* 

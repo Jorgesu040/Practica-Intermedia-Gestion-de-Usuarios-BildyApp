@@ -1,16 +1,24 @@
 import { checkFormatNIF, checkFormatCIF } from "../utils/validatorUtils.js";
 import { z } from "zod";
 
+// Esquemas de validación para rutas relacionadas con usuarios
+// Escritos para Zod 4, siguiendo guia de migracion: https://zod.dev/v4/changelog
+
+
 // Reusable field schemas
 const emailField = z.string()
-    .email("El dato recibido no tiene forma de correo")
-    .max(254, 'El email no puede exceder 254 caracteres')
+    .trim()
     .toLowerCase()
-    .trim();
-const passwordField = z.string().min(8, "La contraseña debe tener al menos 8 caracteres")
-    .regex(/[A-Z]/, 'Debe contener mayúscula')
-    .regex(/[a-z]/, 'Debe contener minúscula')
-    .regex(/[0-9]/, 'Debe contener número');
+    .email({ error: "El dato recibido no tiene forma de correo" })
+    .max(254, { error: 'El email no puede exceder 254 caracteres' });
+const passwordField = z.string().min(8, { error: "La contraseña debe tener al menos 8 caracteres" })
+    .regex(/[A-Z]/, { error: 'Debe contener mayúscula' })
+    .regex(/[a-z]/, { error: 'Debe contener minúscula' })
+    .regex(/[0-9]/, { error: 'Debe contener número' });
+
+const refreshTokenField = z.string()
+    .trim()
+    .min(1, { error: 'El refresh token es obligatorio' });
 
 const addressSchema = z.object({
     street: z.string(),
@@ -32,7 +40,9 @@ export const registerSchema = z.object({
 
 export const emailValidationSchema = z.object({
     body: z.object({
-        verificationCode: z.string().length(6, "El código debe tener exactamente 6 caracteres"),
+        code: z.string()
+            .trim()
+            .regex(/^[0-9]{6}$/, { error: 'El código debe tener exactamente 6 dígitos' }),
     })
 });
 
@@ -43,18 +53,18 @@ export const loginSchema = z.object({
 export const onboardingUserSchema = z.object({
     body: z.object({
         name: z.string()
-            .min(2, 'Mínimo 3 caracteres')
-            .max(99, 'Máximo 99 caracteres')
+            .min(2, { error: 'Mínimo 2 caracteres' })
+            .max(99, { error: 'Máximo 99 caracteres' })
             .trim(),
         lastName: z.string()
-            .min(2, 'Mínimo 3 caracteres')
-            .max(99, 'Máximo 99 caracteres')
+            .min(2, { error: 'Mínimo 2 caracteres' })
+            .max(99, { error: 'Máximo 99 caracteres' })
             .trim(),
         // ref: https://generardni.com/blog/algoritmo-letra-dni-calculo-control/
         nif: z.string()
-            .length(9, 'El NIF debe tener exactamente 9 caracteres')
+            .length(9, { error: 'El NIF debe tener exactamente 9 caracteres' })
             .toUpperCase()
-            .regex(/^[0-9]{8}[A-Z]$/, 'El NIF debe tener 8 dígitos seguidos de una letra')
+            .regex(/^[0-9]{8}[A-Z]$/, { error: 'El NIF debe tener 8 dígitos seguidos de una letra' })
             .refine(checkFormatNIF, { error: "El NIF no es válido" })
     })
 })
@@ -68,12 +78,12 @@ export const companyDataSchema = z.object({
     body: z.object({
         isFreelance: z.boolean(),
         name: z.string()
-            .min(2, 'Mínimo 3 caracteres')
-            .max(99, 'Máximo 99 caracteres')
+            .min(2, { error: 'Mínimo 2 caracteres' })
+            .max(99, { error: 'Máximo 99 caracteres' })
             .trim()
             .optional(),
         cif: z.string()
-            .length(9, 'El NIF/CIF debe tener exactamente 9 caracteres')
+            .length(9, { error: 'El NIF/CIF debe tener exactamente 9 caracteres' })
             .toUpperCase()
             .optional(),
         address: addressSchema.optional()
@@ -121,9 +131,9 @@ export const imageFileSchema = z.object({
     originalname: z.string(),
     mimetype: z.string().refine(
         (value) => ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(value),
-        { message: 'Solo imágenes (jpeg, png, gif, webp)' }
+        { error: 'Solo imágenes (jpeg, png, gif, webp)' }
     ),
-    size: z.number().max(5 * 1024 * 1024, 'Máximo 5MB')
+    size: z.number().max(5 * 1024 * 1024, { error: 'Máximo 5MB' })
 })
 
 export const newPasswordSchema = z.object({
@@ -135,5 +145,17 @@ export const newPasswordSchema = z.object({
         path: ["newPassword"],
     }),
 })
+
+export const refreshTokenSchema = z.object({
+    body: z.object({
+        refreshToken: refreshTokenField
+    })
+});
+
+export const logoutSchema = z.object({
+    body: z.object({
+        refreshToken: refreshTokenField
+    })
+});
 
 

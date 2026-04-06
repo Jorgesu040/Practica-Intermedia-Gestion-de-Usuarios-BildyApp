@@ -59,7 +59,8 @@ export const errorHandler = (err, req, res, next) => {
   
   // Error de Zod
   if (err.name === 'ZodError') {
-    const details = err.errors.map(e => ({
+    const issues = err.issues ?? [];
+    const details = issues.map(e => ({
       field: e.path.join('.'),
       message: e.message
     }));

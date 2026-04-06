@@ -23,7 +23,8 @@ export const validate = (schema) => async (req, res, next) => {
   } catch (error) {
     // Verificamos que el error sea de Zod
     if (error instanceof ZodError) {
-      const errors = error.errors.map(e => ({
+      const issues = error.issues ?? [];
+      const errors = issues.map(e => ({
         field: e.path.join('.'),
         message: e.message
       }));
