@@ -1,4 +1,5 @@
-import { checkFormatNIF, checkFormatCIF } from "../utils/validatorUtils";
+import { checkFormatNIF, checkFormatCIF } from "../utils/validatorUtils.js";
+import { z } from "zod";
 
 // Reusable field schemas
 const emailField = z.string()
@@ -116,15 +117,13 @@ export const companyDataSchema = z.object({
 })
 
 export const imageFileSchema = z.object({
-    body: z.object({
-        fieldName: z.string(),
-        originalName: z.string(),
-        mimetype: z.enum(
-            ["image/jpeg", "image/png", "image/gif", "image/webp"],
-            { error: () => "Solo imágenes (jpeg, png, gif, webp)" }),
-        size: z.number().max(5 * 1024 * 1024, 'Máximo 5MB')
-
-    })
+    fieldname: z.string(),
+    originalname: z.string(),
+    mimetype: z.string().refine(
+        (value) => ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(value),
+        { message: 'Solo imágenes (jpeg, png, gif, webp)' }
+    ),
+    size: z.number().max(5 * 1024 * 1024, 'Máximo 5MB')
 })
 
 export const newPasswordSchema = z.object({

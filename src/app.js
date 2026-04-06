@@ -12,7 +12,7 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({extended: true}))
 
-app.use('/uploads', express.static('storage'));
+app.use('/uploads', express.static('uploads'));
 
 // Health chech
 app.get('/health', (req, res) => {

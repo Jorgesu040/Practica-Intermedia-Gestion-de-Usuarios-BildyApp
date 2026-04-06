@@ -41,3 +41,23 @@ export const validate = (schema) => async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware para validar archivos subidos con Multer usando un schema Zod
+ */
+export const validateFile = (schema) => (req, res, next) => {
+  if (!req.file) {
+    return res.status(400).json({ error: true, message: 'Archivo requerido' });
+  }
+
+  const result = schema.safeParse(req.file);
+
+  if (!result.success) {
+    return res.status(400).json({
+      error: true,
+      message: result.error.issues[0].message
+    });
+  }
+
+  next();
+};
+

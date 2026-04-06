@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { validate } from '../middleware/validate.js';
+import { validate, validateFile } from '../middleware/validate.js';
 import authMiddleware from '../middleware/auth.middleware.js';
+import uploadMiddleware from '../middleware/upload.js';
 import {
     registerSchema,
     emailValidationSchema,
@@ -96,10 +97,10 @@ router.patch('/company', validate(companyDataSchema), authMiddleware, companyOnb
 /*
 * - Requiere token JWT
 * - Usa multer para la subida de archivos
-* - Tiene tamaño maximo en disco //TODO: quien verifica multer, zod, el esquema?
+* - Tiene tamaño maximo en disco de 5MB
 * - Ruta de subida: uploads/, almacena el logo en campo 'logo' de 'Company'
 */
-router.post('/company/logo', validate(imageFileSchema), authMiddleware, uploadCompanyLogo)
+router.post('/company/logo', authMiddleware, uploadMiddleware.single('logo'), validateFile(imageFileSchema), uploadCompanyLogo)
 
 
 /*
