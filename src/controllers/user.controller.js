@@ -58,6 +58,11 @@ export const registerUser = async (req, res, next) => {
             user: dataUser
         }
 
+        notificationEmitter.emit('user:registered', {
+            id: dataUser._id,
+            email: dataUser.email
+        })
+
         res.status(201).json(responseData)
 
     } catch (err) {
@@ -75,7 +80,7 @@ export const validateEmail = async (req, res, next) => {
     try {
         const { verificationCode } = req.body;
         const authenticatedUser = req.user;
-        const retrievedUser = await User.findById(authenticatedUser._id).select('verificationCode verificationAttempts')
+        const retrievedUser = await User.findById(authenticatedUser._id).select('verificationCode verificationAttempts email')
 
         if (!retrievedUser) {
             return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
@@ -98,6 +103,11 @@ export const validateEmail = async (req, res, next) => {
 
         // A partir de aquí el usuario ha introducido un valor correcto
         await User.findByIdAndUpdate(authenticatedUser._id, { status: 'verified' })
+
+        notificationEmitter.emit('user:verified', {
+            id: retrievedUser._id,
+            email: retrievedUser.email
+        })
 
         return res.status(200).json({ message: 'Email validado correctamente' })
 
@@ -409,6 +419,11 @@ export const deleteUser = async (req, res, next) => {
         await User.findByIdAndDelete(user._id)
 
         await RefreshToken.deleteMany({ user: user._id })
+
+        notificationEmitter.emit('user:deleted', {
+            id: user._id,
+            email: user.email
+        })
 
         res.status(200).json({ message: 'User deleted successfully' })
     } catch (err) {
