@@ -31,9 +31,11 @@ export const checkFormatCIF = (cif) => {
     const letraControl = letrasControl[numControl];
 
     // Lógica de validación según el tipo de entidad
-    if ('PQSWR'.includes(firstChar)) {
+    // A, B, E y H requieren dígito de control numérico.
+    // K, P, Q, S, N y W requieren letra de control.
+    if ('ABEH'.includes(firstChar)) {
         return controlDigit === numControl.toString();
-    } else if ('ABEH'.includes(firstChar)) {
+    } else if ('KPQSNW'.includes(firstChar)) {
         return controlDigit === letraControl;
     } else {
         return controlDigit === numControl.toString() || controlDigit === letraControl;

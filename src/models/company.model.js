@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import address from './address.model.js';
 import { checkFormatCIF } from '../utils/validatorUtils.js';
+import { softDeletePlugin } from '../plugins/softDelete.plugin.js';
 
 const companySchema = new mongoose.Schema(
     {
@@ -49,6 +50,8 @@ const companySchema = new mongoose.Schema(
 
 companySchema.set('toJSON', { virtuals: true });
 companySchema.set('toObject', { virtuals: true });
+
+companySchema.plugin(softDeletePlugin);
 
 const Company = mongoose.model('Company', companySchema)
 
