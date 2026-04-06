@@ -9,6 +9,7 @@ import {
     companyDataSchema,
     imageFileSchema,
     newPasswordSchema,
+    inviteSchema,
 } from '../validators/user.validator.js';
 
 import {
@@ -23,7 +24,9 @@ import {
     logoutUser,
     deleteUser,
     changePassword,
+    inviteUser,
 } from '../controllers/user.controller.js';
+import checkRole from '../middleware/role.middleware.js';
 
 const placeholder = (req, res) => {
     console.log("Aviso, se esta llamando a una funcion no implementada")
@@ -143,10 +146,11 @@ router.post('/change-password', validate(newPasswordSchema), authMiddleware, cha
 * - Requiere token JWT y ser admin de 'Company'
 * - Se crea un nuevo usuario con los datos proporcionados y se le asigna el mismo `company` (ObjectId) del usuario que invita, con role `guest`.
 * - Se emite un **evento** `user:invited` mediante EventEmitter
+* - El proceso de onboarding para los usuarios invitados se salta, por lo que el invitador debe proporcionar los datos mínimos necesarios para crear la cuenta, incluido un password temporal que luego el invitado podría cambiar.
+* - Sin embargo, el usuario invitado debe validar su email a través de la ruta '/validation' 
 */
 
-//TODO: invitar necesita contraseña? o se almacena hasta que hace onboadrding?
-router.post('/invite', placeholder)
+router.post('/invite', validate(inviteSchema), authMiddleware, checkRole(['admin']), inviteUser)
 
 
 export default router;

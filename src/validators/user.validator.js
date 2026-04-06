@@ -35,7 +35,6 @@ export const loginSchema = z.object({
     body: credentialsBody
 });
 
-
 export const onboardingUserSchema = z.object({
     body: z.object({
         name: z.string()
@@ -54,6 +53,12 @@ export const onboardingUserSchema = z.object({
             .refine(checkFormatNIF, { error: "El NIF no es válido" })
     })
 })
+
+// Esquema para la ruta de invitación, que combina campos de login y onboarding
+export const inviteSchema = z.object({
+    
+    body: loginSchema.shape.body.extend(onboardingUserSchema.shape.body.shape)
+});
 
 export const companyDataSchema = z.object({
     body: z.object({
