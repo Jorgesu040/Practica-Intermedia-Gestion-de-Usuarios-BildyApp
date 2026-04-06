@@ -38,8 +38,6 @@ const companySchema = new mongoose.Schema(
             type: Boolean,
             default: false
         }
-        // TODO: soft delete
-
     },
     {
         timestamps: true,

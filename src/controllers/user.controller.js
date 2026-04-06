@@ -7,6 +7,11 @@ import {
     generatRefreshToken,
     getRefreshTokenExpiry
 } from "../utils/handleJwt.js"
+import {
+    deleteUserByMode,
+    generateVerificationCode,
+    restoreDeletedUserAndIssueSession
+} from "../utils/userAccountUtils.js"
 
 import { compare, encrypt } from "../utils/handlePassword.js"
 import { AppError } from "../utils/AppError.js"
@@ -21,15 +26,42 @@ export const registerUser = async (req, res, next) => {
     const { email, password } = req.body
 
     try {
-        const existingUser = await User.findOne({ email: email });
+        const existingUser = await User.findOne({ email: email }).setOptions({ withDeleted: true })
 
-        if (existingUser) {
+        if (existingUser && !existingUser.deleted) {
             return next(AppError.conflict('EMAIL_ALREADY_EXISTS', 'EMAIL_ALREADY_EXISTS'))
+        }
+
+        // Si el usuario existía eliminado lógicamente, lo restauramos en lugar de crear duplicado
+        if (existingUser && existingUser.deleted) {
+            const {
+                accessToken,
+                refreshToken,
+                restoredUser
+            } = await restoreDeletedUserAndIssueSession({
+                existingUser,
+                plainPassword: password,
+                ipAddress: req.ip
+            })
+
+            notificationEmitter.emit('user:registered', {
+                id: restoredUser._id,
+                email: restoredUser.email
+            })
+
+            return res.status(200).json({
+                message: 'Cuenta restaurada correctamente',
+                notice: 'Tu cuenta estaba eliminada lógicamente y ha sido restaurada. No hace falta hacer Onboarding, pero si verificar el email con el código de verificación',
+                restored: true,
+                token: accessToken,
+                refreshToken,
+                user: restoredUser
+            })
         }
 
         const encryptedPassword = await encrypt(password)
 
-        const verificationCode = String(Math.floor(100000 + Math.random() * 900000))
+        const verificationCode = generateVerificationCode()
 
         const body = {
             ...req.body,
@@ -88,7 +120,7 @@ export const validateEmail = async (req, res, next) => {
 
         if (retrievedUser.verificationAttempts <= 0) {
             // Si intentos es igual a 0, crear un nuevo código de verificación
-            const newVerificationCode = String(Math.floor(100000 + Math.random() * 900000));
+            const newVerificationCode = generateVerificationCode();
             await User.findByIdAndUpdate(authenticatedUser._id, {
                 verificationCode: newVerificationCode,
                 verificationAttempts: 3
@@ -412,20 +444,31 @@ export const logoutUser = async (req, res, next) => {
 // DELETE /api/user
 export const deleteUser = async (req, res, next) => {
     const user = req.user;
+    const isSoftDelete = req.query.soft === 'true';
 
     try {
+        const { deletedUser, soft } = await deleteUserByMode({
+            userId: user._id,
+            deletedBy: user.email || null,
+            soft: isSoftDelete
+        })
 
-
-        await User.findByIdAndDelete(user._id)
+        if (!deletedUser) {
+            return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
+        }
 
         await RefreshToken.deleteMany({ userRef: user._id })
 
         notificationEmitter.emit('user:deleted', {
             id: user._id,
-            email: user.email
+            email: user.email,
+            mode: soft ? 'soft' : 'hard'
         })
 
-        res.status(200).json({ message: 'User deleted successfully' })
+        return res.status(200).json({
+            message: soft ? 'User soft deleted successfully' : 'User deleted successfully',
+            soft
+        })
     } catch (err) {
         console.log(err)
         return next(AppError.internal('ERR_DELETING_USER', 'ERR_DELETING_USER'))
@@ -495,7 +538,7 @@ export const inviteUser = async (req, res, next) => {
 
         // 4. Preparamos los datos base del invitado
         const encryptedPassword = await encrypt(password);
-        const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+        const verificationCode = generateVerificationCode();
 
         // 5. Creamos el usuario en base de datos.
         // Se autoasigna el companyObjectId y el rol guest

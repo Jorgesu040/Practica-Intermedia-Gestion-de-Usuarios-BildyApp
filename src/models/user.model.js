@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import address from './address.model.js';
 import { checkFormatNIF } from '../utils/validatorUtils.js';
+import { softDeletePlugin } from '../plugins/softDelete.plugin.js';
 
 const userSchema = new mongoose.Schema(
     {
@@ -74,8 +75,6 @@ const userSchema = new mongoose.Schema(
             ref: 'Company'
         },
         address 
-        
-        // TODO: Soft delete 
     }, 
     {
         timestamps: true,
@@ -96,8 +95,11 @@ userSchema.virtual('fullName').get(function() {
     return `${this.name} ${this.lastName}`.trim();
 });
 
+
 userSchema.set('toJSON', { virtuals: true });
 userSchema.set('toObject', { virtuals: true });
+
+userSchema.plugin(softDeletePlugin);
 
 const User = mongoose.model('User', userSchema);
 
