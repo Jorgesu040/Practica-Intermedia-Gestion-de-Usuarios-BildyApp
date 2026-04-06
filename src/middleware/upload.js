@@ -39,7 +39,7 @@ const uploadMiddleware = multer({
   fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024,  // 5MB
-    files: 1                      // Límite máximo de 1 archivo (previene ataques)
+    files: 1                      // Límite máximo de 1 archivo
   }
 });
 

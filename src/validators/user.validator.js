@@ -1,7 +1,11 @@
 import { checkFormatNIF, checkFormatCIF } from "../utils/validatorUtils";
 
 // Reusable field schemas
-const emailField = z.string().email("El dato recibido no tiene forma de correo").toLowerCase().trim();
+const emailField = z.string()
+    .email("El dato recibido no tiene forma de correo")
+    .max(254, 'El email no puede exceder 254 caracteres')
+    .toLowerCase()
+    .trim();
 const passwordField = z.string().min(8, "La contraseña debe tener al menos 8 caracteres")
     .regex(/[A-Z]/, 'Debe contener mayúscula')
     .regex(/[a-z]/, 'Debe contener minúscula')
@@ -56,7 +60,6 @@ export const onboardingUserSchema = z.object({
 
 // Esquema para la ruta de invitación, que combina campos de login y onboarding
 export const inviteSchema = z.object({
-    
     body: loginSchema.shape.body.extend(onboardingUserSchema.shape.body.shape)
 });
 

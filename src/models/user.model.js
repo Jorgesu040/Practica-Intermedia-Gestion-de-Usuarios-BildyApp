@@ -9,8 +9,8 @@ const userSchema = new mongoose.Schema(
             required: [true, 'El email es requerido'],
             lowercase: true,
             trim: true,
-            match: [/^\S+@\S+\.\S+$/, 'Email no válido']
-            // TODO: Cual es el maximo de un correo??
+            match: [/^\S+@\S+\.\S+$/, 'Email no válido'],
+            maxlength: [254, 'El email no puede exceder 254 caracteres']
         },
         password: {
             type: String,
@@ -49,14 +49,13 @@ const userSchema = new mongoose.Schema(
             },
             default: 'pending'
         },
-        // TODO: Como hacer?? Zod borra el campo o lo introduce o lo hace nuestro esquema? 
         verificationCode: {
             type: String
         },
-        // TODO: Como hacer?? Zod borra el campo o lo introduce o lo hace nuestro esquema? 
         verificationAttempts: {
             type: Number,  // Intentos restantes (máximo 3)
-            default: 0,
+            default: 3,
+            min: 0,
             max: 3
         }, 
         company: {

@@ -29,9 +29,14 @@ export const registerUser = async (req, res, next) => {
 
         const encryptedPassword = await encrypt(password)
 
-        const verificationCode = Math.floor(Math.random() * 1000000)
+        const verificationCode = String(Math.floor(100000 + Math.random() * 900000))
 
-        const body = { ...req.body, password: encryptedPassword, verificationCode }
+        const body = {
+            ...req.body,
+            password: encryptedPassword,
+            verificationCode,
+            verificationAttempts: 3
+        }
         const dataUser = await User.create(body)
 
         const accessToken = generateAccessToken(dataUser)
@@ -69,23 +74,32 @@ export const validateEmail = async (req, res, next) => {
 
     try {
         const { verificationCode } = req.body;
-        const user = req.user;
-        const verificationAttempts = await User.findById(user._id).select('verificationAttempts')
+        const authenticatedUser = req.user;
+        const retrievedUser = await User.findById(authenticatedUser._id).select('verificationCode verificationAttempts')
 
-        if (verificationAttempts === 0) {
-            //Si intentos es igual a 0, crear un nuevo código de verificación
-            const newVerificationCode = Math.floor(100000 + Math.random() * 900000);
-            await User.findByIdAndUpdate(user._id, { verificationCode: newVerificationCode, verificationAttempts: 3 })
+        if (!retrievedUser) {
+            return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
+        }
+
+        if (retrievedUser.verificationAttempts <= 0) {
+            // Si intentos es igual a 0, crear un nuevo código de verificación
+            const newVerificationCode = String(Math.floor(100000 + Math.random() * 900000));
+            await User.findByIdAndUpdate(authenticatedUser._id, {
+                verificationCode: newVerificationCode,
+                verificationAttempts: 3
+            })
             return next(AppError.tooManyRequests('Demasiados intentos fallidos. Se ha generado un nuevo código de verificación.', 'TOO_MANY_ATTEMPTS'))
         }
 
-        if (user.verificationCode != verificationCode) {
-            await User.findAndUpdateOne(user._id, { $inc: { verificationAttempts: -1 } })
+        if (String(retrievedUser.verificationCode) !== String(verificationCode)) {
+            await User.findByIdAndUpdate(authenticatedUser._id, { $inc: { verificationAttempts: -1 } })
             return next(AppError.unauthorized('Código de verificación incorrecto', 'INVALID_VERIFICATION_CODE'))
         }
 
         // A partir de aquí el usuario ha introducido un valor correcto
-        await User.findAndUpdateOne(user._id, { status: 'verified' })
+        await User.findByIdAndUpdate(authenticatedUser._id, { status: 'verified' })
+
+        return res.status(200).json({ message: 'Email validado correctamente' })
 
     } catch (err) {
         console.log(err)
@@ -466,7 +480,7 @@ export const inviteUser = async (req, res, next) => {
 
         // 4. Preparamos los datos base del invitado
         const encryptedPassword = await encrypt(password);
-        const verificationCode = Math.floor(100000 + Math.random() * 900000);
+        const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
 
         // 5. Creamos el usuario en base de datos.
         // Se autoasigna el companyObjectId y el rol guest
@@ -479,6 +493,7 @@ export const inviteUser = async (req, res, next) => {
             role: 'guest',
             company: retrievedAdmin.company,
             verificationCode,
+            verificationAttempts: 3,
             status: 'pending' // Seguirá pendiente hasta que valide su correo
         });
 
