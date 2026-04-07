@@ -76,7 +76,7 @@ router.post('/login', validate(loginSchema), loginUser)
 * - Requiere token JWT 
 * - Valida con ZOD los datos recibidos (nombre, apellidos, NIF)
 */
-router.put('/register', validate(onboardingUserSchema), authMiddleware, userOnboarding)
+router.put('/register', validate(onboardingUserSchema), authMiddleware, checkVerified, userOnboarding)
 
 /** Recibe los datos del esquema 'Company' (menos el logo) **/
 /*
@@ -84,7 +84,7 @@ router.put('/register', validate(onboardingUserSchema), authMiddleware, userOnbo
 * - Valida con ZOD name, cif, address (esquema), e isFreelance 
 * - Logica de asignar el CIF: 
 */
-router.patch('/company', validate(companyDataSchema), authMiddleware, companyOnboarding)
+router.patch('/company', validate(companyDataSchema), authMiddleware, checkVerified, companyOnboarding)
 
 
 /** Recibe una imagen que sera un logo **/
@@ -116,15 +116,16 @@ router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken)
 /* 
 * - Requiere token JWT
 * - Si el token es invalido, 401 Unauthorized
+* - Cierra sesión global invalidando todos los refresh tokens del usuario autenticado
 */
-router.post('/logout', validate(logoutSchema), authMiddleware, checkVerified, logoutUser)
+router.post('/logout', validate(logoutSchema), authMiddleware, logoutUser)
 
 /** Eliminar usuario **/
 /* 
 * - Requiere token JWT
 * - Soft delete con ?soft=true
 */
-router.delete('/', authMiddleware, checkVerified, deleteUser)
+router.delete('/', authMiddleware, deleteUser)
 
 /** Cambiar contraseña **/
 /*
@@ -134,7 +135,7 @@ router.delete('/', authMiddleware, checkVerified, deleteUser)
 * - Si todo es correcto, actualiza la contraseña cifrada en la base de datos
 * - Si no, devuelve un error 4XX (cual?)
 */
-router.put('/password', validate(newPasswordSchema), authMiddleware, checkVerified, changePassword)
+router.put('/password', validate(newPasswordSchema), authMiddleware, changePassword)
 
 /** Invitar compañeros **/
 /*

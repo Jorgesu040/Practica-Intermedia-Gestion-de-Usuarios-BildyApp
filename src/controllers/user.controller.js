@@ -450,26 +450,12 @@ export const refreshAccessToken = async (req, res, next) => {
 // POST /api/user/logout
 export const logoutUser = async (req, res, next) => {
     try {
-        const { refreshToken } = req.body;
         const userId = req.user._id;
 
-        if (!refreshToken) {
-            return next(AppError.badRequest('REFRESH_TOKEN_REQUIRED', 'REFRESH_TOKEN_REQUIRED'))
-        }
+        // Logout global: invalida todas las sesiones del usuario
+        await RefreshToken.deleteMany({ userRef: userId })
 
-        // Buscamos y eliminamos el token asegurándonos de que
-        // pertenezca al usuario que está haciendo la petición
-        const deletedToken = await RefreshToken.findOneAndDelete({
-            token: refreshToken,
-            userRef: userId
-        });
-
-        if (!deletedToken) {
-            // El token no existe o no le pertenece a este usuario
-            return next(AppError.unauthorized('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN'))
-        }
-
-        res.status(200).json({ message: 'Logout exitoso' });
+        res.status(200).json({ message: 'Logout global exitoso' });
 
     } catch (err) {
         console.log(err);
