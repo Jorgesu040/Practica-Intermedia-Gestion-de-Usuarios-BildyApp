@@ -21,12 +21,28 @@ const refreshTokenField = z.string()
     .min(1, { error: 'El refresh token es obligatorio' });
 
 const addressSchema = z.object({
-    street: z.string(),
-    number: z.string(),
-    postal: z.string(),
-    city: z.string(),
-    province: z.string()
+    street: z.string().trim().min(1, { error: 'La calle es obligatoria' }),
+    number: z.string().trim().min(1, { error: 'El número es obligatorio' }),
+    postal: z.string().trim().min(1, { error: 'El código postal es obligatorio' }),
+    city: z.string().trim().min(1, { error: 'La ciudad es obligatoria' }),
+    province: z.string().trim().min(1, { error: 'La provincia es obligatoria' })
 })
+
+const nameField = z.string()
+    .min(2, { error: 'Mínimo 2 caracteres' })
+    .max(99, { error: 'Máximo 99 caracteres' })
+    .trim();
+
+const lastNameField = z.string()
+    .min(2, { error: 'Mínimo 2 caracteres' })
+    .max(99, { error: 'Máximo 99 caracteres' })
+    .trim();
+
+const nifField = z.string()
+    .length(9, { error: 'El NIF debe tener exactamente 9 caracteres' })
+    .toUpperCase()
+    .regex(/^[0-9]{8}[A-Z]$/, { error: 'El NIF debe tener 8 dígitos seguidos de una letra' })
+    .refine(checkFormatNIF, { error: 'El NIF no es válido' });
 
 const credentialsBody = z.object({
     email: emailField,
@@ -52,26 +68,20 @@ export const loginSchema = z.object({
 
 export const onboardingUserSchema = z.object({
     body: z.object({
-        name: z.string()
-            .min(2, { error: 'Mínimo 2 caracteres' })
-            .max(99, { error: 'Máximo 99 caracteres' })
-            .trim(),
-        lastName: z.string()
-            .min(2, { error: 'Mínimo 2 caracteres' })
-            .max(99, { error: 'Máximo 99 caracteres' })
-            .trim(),
-        // ref: https://generardni.com/blog/algoritmo-letra-dni-calculo-control/
-        nif: z.string()
-            .length(9, { error: 'El NIF debe tener exactamente 9 caracteres' })
-            .toUpperCase()
-            .regex(/^[0-9]{8}[A-Z]$/, { error: 'El NIF debe tener 8 dígitos seguidos de una letra' })
-            .refine(checkFormatNIF, { error: "El NIF no es válido" })
+        name: nameField,
+        lastName: lastNameField,
+        nif: nifField,
+        address: addressSchema
     })
 })
 
 // Esquema para la ruta de invitación, que combina campos de login y onboarding
 export const inviteSchema = z.object({
-    body: loginSchema.shape.body.extend(onboardingUserSchema.shape.body.shape)
+    body: loginSchema.shape.body.extend({
+        name: nameField,
+        lastName: lastNameField,
+        nif: nifField
+    })
 });
 
 export const companyDataSchema = z.object({
