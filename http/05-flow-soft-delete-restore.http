@@ -1,0 +1,45 @@
+@host = http://localhost:3000
+@restoreEmail = restaurar@example.com
+@restorePassword = RestorePass123
+
+### E1. Registrar usuario para restauración
+# @name register_restore
+POST {{host}}/api/user/register
+Content-Type: application/json
+
+{
+  "email": "{{restoreEmail}}",
+  "password": "{{restorePassword}}"
+}
+
+### E2. Login usuario para restauración
+# @name login_restore
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "{{restoreEmail}}",
+  "password": "{{restorePassword}}"
+}
+
+### E3. Soft delete del usuario
+DELETE {{host}}/api/user?soft=true
+Authorization: Bearer {{login_restore.response.body.token}}
+
+### E4. Registrar mismo email para restaurar cuenta eliminada lógicamente
+POST {{host}}/api/user/register
+Content-Type: application/json
+
+{
+  "email": "{{restoreEmail}}",
+  "password": "{{restorePassword}}"
+}
+
+### E5. Login posterior a restauración
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "{{restoreEmail}}",
+  "password": "{{restorePassword}}"
+}

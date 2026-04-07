@@ -1,0 +1,152 @@
+@host = http://localhost:3000
+@adminEmail = admin.empresa@example.com
+@adminPassword = AdminPass123
+@guestEmail = empleado.empresa@example.com
+@guestPassword = GuestPass123
+
+### A1. Registrar admin
+# @name register_admin_company
+POST {{host}}/api/user/register
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### A2. Validar email admin (poner code real de BBDD)
+PUT {{host}}/api/user/validation
+Content-Type: application/json
+Authorization: Bearer {{register_admin_company.response.body.token}}
+
+{
+  "code": "563796"
+}
+
+### A3. Login admin
+# @name login_admin_company
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### A4. Onboarding admin (datos personales)
+PUT {{host}}/api/user/register
+Content-Type: application/json
+Authorization: Bearer {{login_admin_company.response.body.token}}
+
+{
+  "name": "Admin",
+  "lastName": "Empresa",
+  "nif": "12345678Z",
+  "address": {
+    "street": "Avenida Admin",
+    "number": "1",
+    "postal": "28001",
+    "city": "Madrid",
+    "province": "Madrid"
+  }
+}
+
+### A5. Crear compañía como empresa (admin)
+PATCH {{host}}/api/user/company
+Content-Type: application/json
+Authorization: Bearer {{login_admin_company.response.body.token}}
+
+{
+  "isFreelance": false,
+  "name": "Construcciones Delta S.L.",
+  "cif": "B12345674",
+  "address": {
+    "street": "Avenida Principal",
+    "number": "10",
+    "postal": "28001",
+    "city": "Madrid",
+    "province": "Madrid"
+  }
+}
+
+### A6. Registrar segundo usuario
+# @name register_guest_join
+POST {{host}}/api/user/register
+Content-Type: application/json
+
+{
+  "email": "{{guestEmail}}",
+  "password": "{{guestPassword}}"
+}
+
+### A7. Validar email segundo usuario (poner code real de BBDD)
+PUT {{host}}/api/user/validation
+Content-Type: application/json
+Authorization: Bearer {{register_guest_join.response.body.token}}
+
+{
+  "code": "120021"
+}
+
+### A8. Login segundo usuario
+# @name login_guest_join
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "{{guestEmail}}",
+  "password": "{{guestPassword}}"
+}
+
+### A9. Onboarding segundo usuario
+PUT {{host}}/api/user/register
+Content-Type: application/json
+Authorization: Bearer {{login_guest_join.response.body.token}}
+
+{
+  "name": "Empleado",
+  "lastName": "Empresa",
+  "nif": "87654321X",
+  "address": {
+    "street": "Calle Empleado",
+    "number": "22",
+    "postal": "28002",
+    "city": "Madrid",
+    "province": "Madrid"
+  }
+}
+
+### A10. Intentar crear compañía con CIF ya existente (debe fallar 409)
+PATCH {{host}}/api/user/company
+Content-Type: application/json
+Authorization: Bearer {{login_guest_join.response.body.token}}
+
+{
+  "isFreelance": false,
+  "name": "Construcciones Delta S.L.",
+  "cif": "B12345674",
+  "address": {
+    "street": "Avenida Principal",
+    "number": "10",
+    "postal": "28001",
+    "city": "Madrid",
+    "province": "Madrid"
+  }
+}
+
+### A11. Verificar perfil del segundo usuario (seguirá sin company)
+GET {{host}}/api/user
+Authorization: Bearer {{login_guest_join.response.body.token}}
+
+### A12. Intento de invitar siendo guest (debería fallar 403)
+POST {{host}}/api/user/invite
+Content-Type: application/json
+Authorization: Bearer {{login_guest_join.response.body.token}}
+
+{
+  "email": "fallo.guest@example.com",
+  "password": "GuestFail123",
+  "name": "No",
+  "lastName": "Permitido",
+  "nif": "00000000T"
+}

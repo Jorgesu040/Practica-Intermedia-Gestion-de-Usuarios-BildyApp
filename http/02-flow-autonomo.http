@@ -1,0 +1,63 @@
+@host = http://localhost:3000
+@freelanceEmail = autonomo@example.com
+@freelancePassword = Freelance123
+
+### B1. Registro autónomo
+# @name register_freelance
+POST {{host}}/api/user/register
+Content-Type: application/json
+
+{
+  "email": "{{freelanceEmail}}",
+  "password": "{{freelancePassword}}"
+}
+
+### B2. Validación autónomo (poner code real de BBDD)
+PUT {{host}}/api/user/validation
+Content-Type: application/json
+Authorization: Bearer {{register_freelance.response.body.token}}
+
+{
+  "code": "856307"
+}
+
+### B3. Login autónomo
+# @name login_freelance
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "{{freelanceEmail}}",
+  "password": "{{freelancePassword}}"
+}
+
+### B4. Onboarding personal autónomo
+PUT {{host}}/api/user/register
+Content-Type: application/json
+Authorization: Bearer {{login_freelance.response.body.token}}
+
+{
+  "name": "Lucia",
+  "lastName": "Autonoma",
+  "nif": "00000000T",
+  "address": {
+    "street": "Calle Autonomo",
+    "number": "7",
+    "postal": "46001",
+    "city": "Valencia",
+    "province": "Valencia"
+  }
+}
+
+### B5. Crear compañía freelance (sin cif, name ni address en body)
+PATCH {{host}}/api/user/company
+Content-Type: application/json
+Authorization: Bearer {{login_freelance.response.body.token}}
+
+{
+  "isFreelance": true
+}
+
+### B6. Consultar usuario y compañía autogenerada
+GET {{host}}/api/user
+Authorization: Bearer {{login_freelance.response.body.token}}

@@ -1,0 +1,144 @@
+@host = http://localhost:3000
+@registerToken = {{register.response.body.token}}
+@loginToken = {{login.response.body.token}}
+@refreshToken = {{login.response.body.refreshToken}}
+
+### 1. Registro de usuario
+# @name register
+POST {{host}}/api/user/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+### 2. Validación de email
+# Sustituye el "code" por el código que se haya devuelto o guardado en la BBDD
+PUT {{host}}/api/user/validation
+Content-Type: application/json
+Authorization: Bearer {{registerToken}}
+
+{
+  "code": "241781"
+}
+
+### 3. Login
+# @name login
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+### 4. Onboarding: Datos personales
+PUT {{host}}/api/user/register
+Content-Type: application/json
+Authorization: Bearer {{loginToken}}
+
+{
+  "name": "Juan",
+  "lastName": "Pérez",
+  "nif": "12345678Z",
+  "address": {
+    "street": "Calle Mayor",
+    "number": "1",
+    "postal": "28001",
+    "city": "Madrid",
+    "province": "Madrid"
+  }
+}
+
+### 5. Onboarding: Crear/Unirse a compañía (Empresa)
+PATCH {{host}}/api/user/company
+Content-Type: application/json
+Authorization: Bearer {{loginToken}}
+
+{
+  "name": "Mi Empresa S.L.",
+  "cif": "B12345674",
+  "address": {
+    "street": "Calle Falsa",
+    "number": "123",
+    "postal": "28001",
+    "city": "Madrid",
+    "province": "Madrid"
+  },
+  "isFreelance": false
+}
+
+### 5.1 Onboarding: Crear compañía como Autónomo (isFreelance = true)
+PATCH {{host}}/api/user/company
+Content-Type: application/json
+Authorization: Bearer {{loginToken}}
+
+{
+  "isFreelance": true
+}
+
+### 6. Subir logo de compañía
+# Reemplaza la ruta "< ./logo.png" por la ruta real de tu imagen de prueba
+PATCH {{host}}/api/user/logo
+Authorization: Bearer {{loginToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="logo"; filename="logo.png"
+Content-Type: image/png
+
+< ./logo.png
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 7. Obtener usuario (con populate)
+GET {{host}}/api/user
+Authorization: Bearer {{loginToken}}
+
+### 8. Refrescar token
+POST {{host}}/api/user/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### 9. Cambiar contraseña (Bonus)
+PUT {{host}}/api/user/password
+Content-Type: application/json
+Authorization: Bearer {{loginToken}}
+
+{
+  "currentPassword": "Password123!",
+  "newPassword": "NewPassword123!"
+}
+
+### 10. Invitar compañeros (Requiere rol admin)
+POST {{host}}/api/user/invite
+Content-Type: application/json
+Authorization: Bearer {{loginToken}}
+
+{
+  "email": "invitado@example.com",
+  "password": "Password123!",
+  "name": "Ana",
+  "lastName": "García",
+  "nif": "87654321X"
+}
+
+### 11. Eliminar usuario (Soft Delete)
+DELETE {{host}}/api/user?soft=true
+Authorization: Bearer {{loginToken}}
+
+### 12. Eliminar usuario (Hard Delete)
+DELETE {{host}}/api/user
+Authorization: Bearer {{loginToken}}
+
+### 13. Logout
+POST {{host}}/api/user/logout
+Content-Type: application/json
+Authorization: Bearer {{loginToken}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}

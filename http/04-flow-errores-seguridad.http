@@ -1,0 +1,85 @@
+@host = http://localhost:3000
+@adminEmail = admin.seguridad@example.com
+@adminPassword = AdminSecure123
+
+### D0. Preparación: registrar admin de pruebas
+# @name register_admin_security
+POST {{host}}/api/user/register
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### D0.1 Validar email admin (poner code real de BBDD)
+PUT {{host}}/api/user/validation
+Content-Type: application/json
+Authorization: Bearer {{register_admin_security.response.body.token}}
+
+{
+  "code": "718462"
+}
+
+### D0.2 Login admin
+# @name login_admin_security
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### D1. Error por no enviar token
+GET {{host}}/api/user
+
+### D2. Login con password incorrecta (debería 401)
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "PasswordIncorrecta999"
+}
+
+### D3. Crear company inválida (isFreelance false sin campos requeridos)
+PATCH {{host}}/api/user/company
+Content-Type: application/json
+Authorization: Bearer {{login_admin_security.response.body.token}}
+
+{
+  "isFreelance": false
+}
+
+### D4. Cambio de contraseña inválido (newPassword igual a currentPassword)
+PUT {{host}}/api/user/password
+Content-Type: application/json
+Authorization: Bearer {{login_admin_security.response.body.token}}
+
+{
+  "currentPassword": "{{adminPassword}}",
+  "newPassword": "{{adminPassword}}"
+}
+
+### D5. Refresh token inválido
+POST {{host}}/api/user/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "token.invalido"
+}
+
+### D6. Invite sin rol admin o sin company (debería 403/4XX)
+# Ejecuta este request con un token de usuario guest si quieres validar autorización por rol.
+POST {{host}}/api/user/invite
+Content-Type: application/json
+Authorization: Bearer {{login_admin_security.response.body.token}}
+
+{
+  "email": "error.invite@example.com",
+  "password": "InviteError123",
+  "name": "Error",
+  "lastName": "Invite",
+  "nif": "33333333P"
+}

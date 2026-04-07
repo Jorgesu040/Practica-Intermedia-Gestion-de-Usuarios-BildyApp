@@ -1,0 +1,107 @@
+@host = http://localhost:3000
+@adminEmail = admin.invitador@example.com
+@adminPassword = AdminInvite123
+@invitedEmail = nuevo.invitado@example.com
+@invitedPassword = InvitePass123
+
+### C1. Registrar admin invitador
+# @name register_admin_inviter
+POST {{host}}/api/user/register
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### C2. Validar email admin (poner code real de BBDD)
+PUT {{host}}/api/user/validation
+Content-Type: application/json
+Authorization: Bearer {{register_admin_inviter.response.body.token}}
+
+{
+  "code": "634038"
+}
+
+### C3. Login admin
+# @name login_admin_inviter
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### C4. Onboarding admin
+PUT {{host}}/api/user/register
+Content-Type: application/json
+Authorization: Bearer {{login_admin_inviter.response.body.token}}
+
+{
+  "name": "Admin",
+  "lastName": "Invitador",
+  "nif": "22222222J",
+  "address": {
+    "street": "Calle Admin",
+    "number": "9",
+    "postal": "46001",
+    "city": "Valencia",
+    "province": "Valencia"
+  }
+}
+
+### C5. Crear compañía para habilitar invitaciones
+PATCH {{host}}/api/user/company
+Content-Type: application/json
+Authorization: Bearer {{login_admin_inviter.response.body.token}}
+
+{
+  "isFreelance": false,
+  "name": "Equipo Invita S.L.",
+  "cif": "B76543214",
+  "address": {
+    "street": "Calle Equipo",
+    "number": "5",
+    "postal": "46001",
+    "city": "Valencia",
+    "province": "Valencia"
+  }
+}
+
+### C6. Invitar compañero (debe crear guest)
+# @name invite_user_from_admin
+POST {{host}}/api/user/invite
+Content-Type: application/json
+Authorization: Bearer {{login_admin_inviter.response.body.token}}
+
+{
+  "email": "{{invitedEmail}}",
+  "password": "{{invitedPassword}}",
+  "name": "Invitado",
+  "lastName": "Equipo",
+  "nif": "11111111H"
+}
+
+### C7. Login del invitado
+# @name login_invited
+POST {{host}}/api/user/login
+Content-Type: application/json
+
+{
+  "email": "{{invitedEmail}}",
+  "password": "{{invitedPassword}}"
+}
+
+### C8. Validar email del invitado (poner code real de BBDD)
+PUT {{host}}/api/user/validation
+Content-Type: application/json
+Authorization: Bearer {{login_invited.response.body.token}}
+
+{
+  "code": "432791"
+}
+
+### C9. Consultar perfil invitado
+GET {{host}}/api/user
+Authorization: Bearer {{login_invited.response.body.token}}
