@@ -59,7 +59,11 @@ export const registerUser = async (req, res, next) => {
                 restored: true,
                 token: accessToken,
                 refreshToken,
-                user: restoredUser
+                user: {
+                    email: restoredUser.email,
+                    status: restoredUser.status,
+                    role: restoredUser.role
+                }
             }
 
             if (isDevelopment) {
@@ -98,7 +102,11 @@ export const registerUser = async (req, res, next) => {
         const responseData = {
             token: accessToken,
             refreshToken: refreshToken,
-            user: dataUser
+            user: {
+                email: dataUser.email,
+                status: dataUser.status,
+                role: dataUser.role
+            }
         }
 
         if (isDevelopment) {
@@ -200,7 +208,12 @@ export const loginUser = async (req, res, next) => {
         const responseData = {
             token: accessToken,
             refreshToken: refreshToken,
-            user: user
+            user: {
+                email: user.email,
+                status: user.status,
+                role: user.role,
+                company: user.company ?? null
+            }
         }
 
         res.status(200).json(responseData)
@@ -420,6 +433,11 @@ export const refreshAccessToken = async (req, res, next) => {
     }
 
     const user = storedToken.userRef;
+
+    if (!user) {
+        await RefreshToken.findByIdAndDelete(storedToken._id)
+        return next(AppError.unauthorized('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN'))
+    }
 
     // Generar un nuevo access token
     const newAccessToken = generateAccessToken(user)

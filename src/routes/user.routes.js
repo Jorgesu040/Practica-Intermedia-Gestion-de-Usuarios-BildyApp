@@ -30,6 +30,7 @@ import {
     inviteUser,
 } from '../controllers/user.controller.js';
 import checkRole from '../middleware/role.middleware.js';
+import checkVerified from '../middleware/verified.middleware.js';
 
 const router = Router();
 
@@ -93,7 +94,7 @@ router.patch('/company', validate(companyDataSchema), authMiddleware, companyOnb
 * - Tiene tamaño maximo en disco de 5MB
 * - Ruta de subida: uploads/, almacena el logo en campo 'logo' de 'Company'
 */
-router.patch('/logo', authMiddleware, uploadMiddleware.single('logo'), validateFile(imageFileSchema), uploadCompanyLogo)
+router.patch('/logo', authMiddleware, checkVerified, uploadMiddleware.single('logo'), validateFile(imageFileSchema), uploadCompanyLogo)
 
 
 /*
@@ -101,7 +102,7 @@ router.patch('/logo', authMiddleware, uploadMiddleware.single('logo'), validateF
 * - Devuelve tambien el Objeto 'Company'
 * - Devuelve el campo fullName
 */
-router.get('/', authMiddleware, getUserData)
+router.get('/', authMiddleware, checkVerified, getUserData)
 
 /**Ruta de refresco**/
 /* 
@@ -116,14 +117,14 @@ router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken)
 * - Requiere token JWT
 * - Si el token es invalido, 401 Unauthorized
 */
-router.post('/logout', validate(logoutSchema), authMiddleware, logoutUser)
+router.post('/logout', validate(logoutSchema), authMiddleware, checkVerified, logoutUser)
 
 /** Eliminar usuario **/
 /* 
 * - Requiere token JWT
 * - Soft delete con ?soft=true
 */
-router.delete('/', authMiddleware, deleteUser)
+router.delete('/', authMiddleware, checkVerified, deleteUser)
 
 /** Cambiar contraseña **/
 /*
@@ -133,7 +134,7 @@ router.delete('/', authMiddleware, deleteUser)
 * - Si todo es correcto, actualiza la contraseña cifrada en la base de datos
 * - Si no, devuelve un error 4XX (cual?)
 */
-router.put('/password', validate(newPasswordSchema), authMiddleware, changePassword)
+router.put('/password', validate(newPasswordSchema), authMiddleware, checkVerified, changePassword)
 
 /** Invitar compañeros **/
 /*
@@ -144,7 +145,7 @@ router.put('/password', validate(newPasswordSchema), authMiddleware, changePassw
 * - Sin embargo, el usuario invitado debe validar su email a través de la ruta '/validation' 
 */
 
-router.post('/invite', validate(inviteSchema), authMiddleware, checkRole(['admin']), inviteUser)
+router.post('/invite', validate(inviteSchema), authMiddleware, checkVerified, checkRole(['admin']), inviteUser)
 
 
 export default router;
