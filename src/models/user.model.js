@@ -62,7 +62,8 @@ const userSchema = new mongoose.Schema(
             type: String,
             minlength: [6, 'El código de verificación debe tener 6 caracteres'],
             maxlength: [6, 'El código de verificación debe tener 6 caracteres'],
-            match: [/^[0-9]{6}$/, 'El código de verificación debe contener 6 dígitos']
+            match: [/^[0-9]{6}$/, 'El código de verificación debe contener 6 dígitos'],
+            select: false
         },
         verificationAttempts: {
             type: Number,  // Intentos restantes (máximo 3)

@@ -127,7 +127,7 @@ export const validateEmail = async (req, res, next) => {
     try {
         const { code } = req.body;
         const authenticatedUser = req.user;
-        const retrievedUser = await User.findById(authenticatedUser._id).select('verificationCode verificationAttempts email')
+        const retrievedUser = await User.findById(authenticatedUser._id).select('+verificationCode verificationAttempts email')
 
         if (!retrievedUser) {
             return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
@@ -203,10 +203,10 @@ export const loginUser = async (req, res, next) => {
             user: user
         }
 
-        res.status(201).send(responseData)
+        res.status(200).json(responseData)
     } catch (err) {
         console.log(err)
-        next(AppError.internal('ERR_REGISTERING_USER', 'ERR_REGISTERING_USER'))
+        next(AppError.internal('ERR_LOGGING_USER', 'ERR_LOGGING_USER'))
     }
 
 }
@@ -216,7 +216,7 @@ export const loginUser = async (req, res, next) => {
 
 export const userOnboarding = async (req, res, next) => {
 
-    const { name, lastName, nif } = req.body
+    const { name, lastName, nif, address } = req.body
     const authenticatedUser = req.user;
 
     try {
@@ -226,13 +226,11 @@ export const userOnboarding = async (req, res, next) => {
             return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
         }
 
-        user.set({ name, lastName, nif })
+        user.set({ name, lastName, nif, address })
 
         await user.save()
 
-        user.set('password', undefined, { strict: false })
-
-        res.status(201).send(user)
+        res.status(200).json(user)
 
     } catch (err) {
         console.log(err)
@@ -258,6 +256,25 @@ export const companyOnboarding = async (req, res, next) => {
 
         if (!retrievedUser) {
             return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))
+        }
+
+        if (isFreelance) {
+            const hasAddress = Boolean(
+                retrievedUser.address?.street &&
+                retrievedUser.address?.number &&
+                retrievedUser.address?.postal &&
+                retrievedUser.address?.city &&
+                retrievedUser.address?.province
+            )
+
+            if (!retrievedUser.nif || !retrievedUser.name || !retrievedUser.lastName || !hasAddress) {
+                return next(
+                    AppError.badRequest(
+                        'Para crear empresa como autónomo debes completar nombre, apellidos, NIF y dirección en el onboarding personal',
+                        'COMPLETE_USER_PROFILE_REQUIRED'
+                    )
+                )
+            }
         }
 
         // Garantizamos consistencia de datos: los autónomos usan su NIF y datos personales obligatoriamente
@@ -301,7 +318,6 @@ export const companyOnboarding = async (req, res, next) => {
 
         // Devolvemos datos actualizados del usuario, incluyendo el nuevo campo 'company' poblado sin la contraseña
         await retrievedUser.populate('company')
-        retrievedUser.set('password', undefined, { strict: false })
 
         return res.status(200).json({ user: retrievedUser })
     } catch (err) {
@@ -334,6 +350,11 @@ export const uploadCompanyLogo = async (req, res, next) => {
 
         // Comprobar y borrar el logo anterior si existiera
         const company = await Company.findById(retrievedUser.company);
+        if (!company) {
+            await fs.unlink(req.file.path).catch(() => { });
+            return next(AppError.notFound('COMPANY_NOT_FOUND', 'COMPANY_NOT_FOUND'))
+        }
+
         if (company.logo) {
             // logoPath guardado es '/uploads/filename.ext', hay que sacar la ruta local
             const oldFilename = path.basename(company.logo);
@@ -373,8 +394,6 @@ export const getUserData = async (req, res, next) => {
 
     try {
         const retrievedUser = await User.findById(user._id).populate('company')
-
-        retrievedUser.set('password', undefined, { strict: false })
 
         return res.status(200).json({ user: retrievedUser })
     } catch (err) {
@@ -500,8 +519,7 @@ export const changePassword = async (req, res, next) => {
         retrievedUser.set({ password: encryptedNewPassword })
 
         await retrievedUser.save()
-
-        retrievedUser.set('password', undefined, { strict: false })
+        await RefreshToken.deleteMany({ userRef: retrievedUser._id })
 
         res.status(200).json({ message: 'Password changed successfully' })
 
@@ -515,6 +533,8 @@ export const changePassword = async (req, res, next) => {
 
 // POST /api/user/invite
 export const inviteUser = async (req, res, next) => {
+    const isDevelopment = process.env.NODE_ENV === 'development'
+
     // 1. Extraemos los datos del administrador y los campos a crear para el invitado
     const adminUser = req.user;
     // Como los usarios invitados se saltan el proceso de onboarding, el invitador debe proporcionar los datos mínimos necesarios para crear la cuenta, incluido un password temporal que luego el invitado podría   cambiar.
@@ -562,12 +582,20 @@ export const inviteUser = async (req, res, next) => {
         });
 
         // 7. Retiramos la contraseña antes de mandarlo en la respuesta
+        const inviteVerificationCode = guestUser.verificationCode;
         guestUser.set('password', undefined, { strict: false });
+        guestUser.set('verificationCode', undefined, { strict: false });
 
-        res.status(201).json({
+        const inviteResponse = {
             message: 'Compañero/a invitado con éxito',
             user: guestUser
-        });
+        };
+
+        if (isDevelopment) {
+            inviteResponse.verificationCode = inviteVerificationCode;
+        }
+
+        res.status(201).json(inviteResponse);
 
     } catch (err) {
         console.log(err);
