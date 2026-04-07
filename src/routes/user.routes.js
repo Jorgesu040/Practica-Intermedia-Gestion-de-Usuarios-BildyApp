@@ -74,15 +74,19 @@ router.post('/login', validate(loginSchema), loginUser)
 /** Recibe el resto de datos de 'User' **/
 /*
 * - Requiere token JWT 
+* - Requiere usuario con status 'verified'
 * - Valida con ZOD los datos recibidos (nombre, apellidos, NIF)
+* - Actualiza datos personales y address
 */
 router.put('/register', validate(onboardingUserSchema), authMiddleware, checkVerified, userOnboarding)
 
 /** Recibe los datos del esquema 'Company' (menos el logo) **/
 /*
 * - Requiere token JWT
+* - Requiere usuario con status 'verified'
 * - Valida con ZOD name, cif, address (esquema), e isFreelance 
-* - Logica de asignar el CIF: 
+* - Si existe una empresa con ese CIF/NIF -> 409, tienes que estar invitado (prevenir a cualquiera que una a cualquier empresa)
+* - Si no existe -> crea una nueva Company y asigna al usuario como owner/admin
 */
 router.patch('/company', validate(companyDataSchema), authMiddleware, checkVerified, companyOnboarding)
 
@@ -90,6 +94,7 @@ router.patch('/company', validate(companyDataSchema), authMiddleware, checkVerif
 /** Recibe una imagen que sera un logo **/
 /*
 * - Requiere token JWT
+* - Requiere usuario con status 'verified'
 * - Usa multer para la subida de archivos
 * - Tiene tamaño maximo en disco de 5MB
 * - Ruta de subida: uploads/, almacena el logo en campo 'logo' de 'Company'
@@ -99,6 +104,7 @@ router.patch('/logo', authMiddleware, checkVerified, uploadMiddleware.single('lo
 
 /*
 * - Requiere JWT (validacion), devuelve datos de usuario autenticado
+* - Requiere usuario con status 'verified'
 * - Devuelve tambien el Objeto 'Company'
 * - Devuelve el campo fullName
 */
@@ -115,14 +121,15 @@ router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken)
 /** Logout **/
 /* 
 * - Requiere token JWT
-* - Si el token es invalido, 401 Unauthorized
-* - Cierra sesión global invalidando todos los refresh tokens del usuario autenticado
+* - Se valida body con logoutSchema (refreshToken requerido por contrato)
+* - Cierra sesion global invalidando todos los refresh tokens del usuario autenticado
 */
 router.post('/logout', validate(logoutSchema), authMiddleware, logoutUser)
 
 /** Eliminar usuario **/
 /* 
 * - Requiere token JWT
+* - Disponible para usuarios pending y verified
 * - Soft delete con ?soft=true
 */
 router.delete('/', authMiddleware, deleteUser)
@@ -130,20 +137,21 @@ router.delete('/', authMiddleware, deleteUser)
 /** Cambiar contraseña **/
 /*
 * - Requiere token JWT
+* - Disponible para usuarios pending y verified
 * - Recibe en el cuerpo la nueva y la actual contraseña
-* - Valida que la nuyeva contraseña es distinta, cumple con los requisitos de seguridad y que la actual contraseña es correcta
+* - Valida que la nueva contraseña es distinta, cumple con los requisitos de seguridad y que la actual contraseña es correcta
 * - Si todo es correcto, actualiza la contraseña cifrada en la base de datos
-* - Si no, devuelve un error 4XX (cual?)
+* - Invalida todos los refresh tokens del usuario
 */
 router.put('/password', validate(newPasswordSchema), authMiddleware, changePassword)
 
 /** Invitar compañeros **/
 /*
-* - Requiere token JWT y ser admin de 'Company'
+* - Requiere token JWT, status verified y ser admin de 'Company'
 * - Se crea un nuevo usuario con los datos proporcionados y se le asigna el mismo `company` (ObjectId) del usuario que invita, con role `guest`.
 * - Se emite un **evento** `user:invited` mediante EventEmitter
-* - El proceso de onboarding para los usuarios invitados se salta, por lo que el invitador debe proporcionar los datos mínimos necesarios para crear la cuenta, incluido un password temporal que luego el invitado podría cambiar.
-* - Sin embargo, el usuario invitado debe validar su email a través de la ruta '/validation' 
+* - El proceso de onboarding para los usuarios invitados se salta, por lo que el invitador proporciona los datos necesarios para crear la cuenta.
+* - El usuario invitado queda 'pending' hasta validar su email en '/validation'
 */
 
 router.post('/invite', validate(inviteSchema), authMiddleware, checkVerified, checkRole(['admin']), inviteUser)
