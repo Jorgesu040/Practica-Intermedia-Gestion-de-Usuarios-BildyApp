@@ -24,6 +24,7 @@ import path from 'path';
 export const registerUser = async (req, res, next) => {
 
     const { email, password } = req.body
+    const isDevelopment = process.env.NODE_ENV === 'development'
 
     try {
         const existingUser = await User.findOne({ email: email }).setOptions({ withDeleted: true })
@@ -44,19 +45,28 @@ export const registerUser = async (req, res, next) => {
                 ipAddress: req.ip
             })
 
+            const restoredVerificationCode = restoredUser.verificationCode
+            restoredUser.set('verificationCode', undefined, { strict: false })
+
             notificationEmitter.emit('user:registered', {
                 id: restoredUser._id,
                 email: restoredUser.email
             })
 
-            return res.status(200).json({
+            const restoredResponse = {
                 message: 'Cuenta restaurada correctamente',
                 notice: 'Tu cuenta estaba eliminada lógicamente y ha sido restaurada. No hace falta hacer Onboarding, pero si verificar el email con el código de verificación',
                 restored: true,
                 token: accessToken,
                 refreshToken,
                 user: restoredUser
-            })
+            }
+
+            if (isDevelopment) {
+                restoredResponse.verificationCode = restoredVerificationCode
+            }
+
+            return res.status(200).json(restoredResponse)
         }
 
         const encryptedPassword = await encrypt(password)
@@ -83,11 +93,16 @@ export const registerUser = async (req, res, next) => {
         })
 
         dataUser.set('password', undefined, { strict: false })
+        dataUser.set('verificationCode', undefined, { strict: false })
 
         const responseData = {
             token: accessToken,
             refreshToken: refreshToken,
             user: dataUser
+        }
+
+        if (isDevelopment) {
+            responseData.verificationCode = verificationCode
         }
 
         notificationEmitter.emit('user:registered', {
@@ -260,43 +275,27 @@ export const companyOnboarding = async (req, res, next) => {
                 isFreelance: false
             }
 
-        let company = await Company.findOne({ cif: companyPayload.cif })
+        const existingCompany = await Company.findOne({ cif: companyPayload.cif })
 
-        if (!company) {
-            // Si la empresa no existe, se crea y el usuario queda como dueño y admin independientemente del tipo
-            company = await Company.create({
-                ...companyPayload,
-                owner: retrievedUser._id
-            })
-
-            retrievedUser.set({
-                company: company._id,
-                role: 'admin'
-            })
-        } else {
-            if (isFreelance) {
-                // Como el NIF es único y NIF/CIF tienen formatos excluyentes, 
-                // si la empresa existe, este usuario es obligatoriamente su owner.
-                company.set({
-                    name: retrievedUser.fullName,
-                    address: retrievedUser.address,
-                    isFreelance: true
-                })
-
-                await company.save()
-
-                retrievedUser.set({
-                    company: company._id,
-                    role: 'admin'
-                })
-            } else {
-                // Ya existe empresa con ese CIF: el usuario se une y pasa a guest
-                retrievedUser.set({
-                    company: company._id,
-                    role: 'guest'
-                })
-            }
+        if (existingCompany) {
+            const companyIdentifier = isFreelance ? 'NIF' : 'CIF'
+            return next(
+                AppError.conflict(
+                    `Ya existe una empresa con ese ${companyIdentifier}. Pide al administrador que te invite a la compañía existente`,
+                    'COMPANY_IDENTIFIER_ALREADY_EXISTS'
+                )
+            )
         }
+
+        const company = await Company.create({
+            ...companyPayload,
+            owner: retrievedUser._id
+        })
+
+        retrievedUser.set({
+            company: company._id,
+            role: 'admin'
+        })
 
         await retrievedUser.save()
 
