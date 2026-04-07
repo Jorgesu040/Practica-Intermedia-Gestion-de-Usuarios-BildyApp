@@ -69,7 +69,8 @@ const userSchema = new mongoose.Schema(
             type: Number,  // Intentos restantes (máximo 3)
             default: 3,
             min: 0,
-            max: 3
+            max: 3,
+            select: false
         }, 
         company: {
             type: mongoose.Schema.Types.ObjectId,
@@ -79,6 +80,7 @@ const userSchema = new mongoose.Schema(
     }, 
     {
         timestamps: true,
+        id: false,
         versionKey: false        
     }
         

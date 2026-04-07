@@ -22,12 +22,23 @@ const apiRateLimit = rateLimit({
     }
 });
 
+// Fix para mongo sanitize en Express 5
+const mongoSanitizeExpress5 = (req, res, next) => {
+    ['body', 'params', 'query'].forEach((key) => {
+        if (req[key] && typeof req[key] === 'object') {
+            mongoSanitize.sanitize(req[key]);
+        }
+    });
+
+    next();
+};
+
 // Middleware globales
 app.use(cors())
 app.use(helmet())
 app.use(express.json())
 app.use(express.urlencoded({extended: true}))
-app.use(mongoSanitize())
+app.use(mongoSanitizeExpress5)
 
 app.use('/uploads', express.static('uploads'));
 

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 import address from './address.model.js';
-import { checkFormatCIF } from '../utils/validatorUtils.js';
+import { checkFormatCIF, checkFormatNIF } from '../utils/validatorUtils.js';
 import { softDeletePlugin } from '../plugins/softDelete.plugin.js';
 
 const companySchema = new mongoose.Schema(
@@ -18,16 +18,21 @@ const companySchema = new mongoose.Schema(
         },
         cif: {
             type: String,
-            required: [true, 'El CIF es requerido'],
+            required: [true, 'El identificador fiscal es requerido'],
             unique: true,
             trim: true,
             uppercase: true,
-            minlength: [9, 'El CIF debe tener exactamente 9 caracteres'],
-            maxlength: [9, 'El CIF debe tener exactamente 9 caracteres'],
-            match: [/^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/, 'Formato de CIF inválido'],
+            minlength: [9, 'El identificador fiscal debe tener exactamente 9 caracteres'],
+            maxlength: [9, 'El identificador fiscal debe tener exactamente 9 caracteres'],
             validate: {
-                validator: checkFormatCIF,
-                message: 'El código de control del CIF no es válido'
+                validator: function(value) {
+                    if (this.isFreelance) {
+                        return checkFormatNIF(value);
+                    }
+
+                    return checkFormatCIF(value);
+                },
+                message: 'El identificador fiscal no es válido para el tipo de compañía'
             }
         },
         address,
@@ -42,6 +47,7 @@ const companySchema = new mongoose.Schema(
     },
     {
         timestamps: true,
+        id: false,
         versionKey: false
     }
 

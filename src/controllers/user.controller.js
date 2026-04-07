@@ -55,7 +55,7 @@ export const registerUser = async (req, res, next) => {
 
             const restoredResponse = {
                 message: 'Cuenta restaurada correctamente',
-                notice: 'Tu cuenta estaba eliminada lógicamente y ha sido restaurada. No hace falta hacer Onboarding, pero si verificar el email con el código de verificación',
+                notice: 'Tu cuenta estaba eliminada lógicamente y ha sido restaurada. No hace falta hacer Onboarding si ya lo has hecho, pero si verificar el email con el código de verificación',
                 restored: true,
                 token: accessToken,
                 refreshToken,
@@ -135,7 +135,7 @@ export const validateEmail = async (req, res, next) => {
     try {
         const { code } = req.body;
         const authenticatedUser = req.user;
-        const retrievedUser = await User.findById(authenticatedUser._id).select('+verificationCode verificationAttempts email')
+        const retrievedUser = await User.findById(authenticatedUser._id).select('+verificationCode +verificationAttempts email')
 
         if (!retrievedUser) {
             return next(AppError.notFound('USER_NOT_FOUND', 'USER_NOT_FOUND'))

@@ -1,15 +1,33 @@
 // AUX functions
 export const checkFormatNIF = (nif) => {
-    const numberPart = parseInt(nif.slice(0, 8), 10);
-    const letterPart = nif.charAt(8).toUpperCase();
+    if (typeof nif !== 'string') {
+        return false;
+    }
+
+    const normalizedNif = nif.trim().toUpperCase();
+    if (!/^[0-9]{8}[A-Z]$/.test(normalizedNif)) {
+        return false;
+    }
+
+    const numberPart = parseInt(normalizedNif.slice(0, 8), 10);
+    const letterPart = normalizedNif.charAt(8);
     const validLetters = 'TRWAGMYFPDXBNJZSQVHLCKE';
     const expectedLetter = validLetters[numberPart % 23];
     return letterPart === expectedLetter;
 };
 export const checkFormatCIF = (cif) => {
-    const firstChar = cif.charAt(0).toUpperCase();
-    const digits = cif.substring(1, 8);
-    const controlDigit = cif.charAt(8).toUpperCase();
+    if (typeof cif !== 'string') {
+        return false;
+    }
+
+    const normalizedCif = cif.trim().toUpperCase();
+    if (!/^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(normalizedCif)) {
+        return false;
+    }
+
+    const firstChar = normalizedCif.charAt(0);
+    const digits = normalizedCif.substring(1, 8);
+    const controlDigit = normalizedCif.charAt(8);
 
     let sumaPares = 0;
     let sumaImpares = 0;
